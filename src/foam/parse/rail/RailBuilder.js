@@ -155,6 +155,9 @@ foam.CLASS({
       if ( P.ParserWithAction.isInstance(p) ) return '⚙';
       if ( P.Suggest.isInstance(p) || P.Msg.isInstance(p) ) return '💬';
       if ( P.DebugParser.isInstance(p) )     return '🐞';
+      // TODO: foam.parse.Span (wraps a parser and records where its match starts and ends) has no drawing yet.
+      // It shows as a grey generic box, and RailNotationTest fails with 'missing: Span' until it gets a badge here,
+      // a row in NOTATION.md and a sample in that test.
       return null;
     },
 

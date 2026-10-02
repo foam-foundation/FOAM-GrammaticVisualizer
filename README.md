@@ -30,7 +30,7 @@ Query parameters load your own files. Every URL has to be on the same origin as 
 
 ### Use the viewer in a FOAM app
 
-Add `src/foam/parse/rail/pom` to the app's `projects:` with `flags: 'web'`, then mount `foam.parse.rail.RailDiagramView` and set its `grammar` to a `foam.parse.Grammar`.
+Add `src/foam/parse/rail/pom` to the app's `projects:` with `flags: 'web'`, then mount `foam.parse.rail.RailDiagramView`, created with `grammar:` set to a `foam.parse.Grammar`. To show another grammar later, call `useGrammar(g)`. The pom path is relative to wherever this repository is checked out inside the app.
 
 ### Run the tests
 
@@ -40,6 +40,8 @@ The tests are FOAM `JSTest` classes and run in a browser through FOAM's test bui
 (cd foam3 && ./build.sh --install)    # once: FOAM's npm packages
 ./build.sh client-tests:RailThemeTest,ParserLabelsTest,RailTerminalTest,RailStripTest,RailBuilderTest,RailSceneTest,RailAltTest,RailRepeatTest,RailOptionalTest,RailSymRefTest,RailReachabilityTest,RailUntilTest,RailGateTest,RailBadgeTest,RailNotationTest,ParseTraceTest,RailTraceApplyTest,RailSvgTest,RailDomSceneTest,DocumentViewTest
 ```
+
+Known failure: `RailNotationTest` reports `missing: Span`. `foam.parse.Span` is new in FOAM and the viewer has no diagram for it yet, so it draws as a grey generic box. The test fails by design whenever FOAM gains a parser with no row in `NOTATION.md`.
 
 ### Layout
 
