@@ -1,0 +1,22 @@
+<!-- Demo for the ui-statechart skill: walk one small state machine. To run it from source, copy this folder to
+     <app>/ignored/spikes/order-walker/ (skill at <app>/.claude/skills/ui-statechart/, foam3 at <app>/foam3/) and serve <app>. -->
+<html>
+ <head>
+  <meta charset="utf-8">
+  <script language="javascript" src="../../../foam3/src/foam.js" project="../../../foam3/src/pom,../../../.claude/skills/ui-statechart/references/fsm-pom"></script>
+  <script language="javascript" src="machines.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "neutral", state: { useMaxWidth: false } });</script>
+  <script src="../../../.claude/skills/ui-statechart/references/spike-diagram.js"></script>
+  <script language="javascript" src="../../../.claude/skills/ui-statechart/references/fsm-walker.template.js"></script>
+  <script language="javascript" src="config.js"></script>
+  <title>Online order (read-only walker)</title>
+  <meta name="description" content="Which step can an order move to next, and why? Walk a ten-state order machine click by click">
+  <meta name="spec" content="machines.js in this folder: a small public demo machine, not a real product.">
+  <meta name="spike-category" content="Machines — FSM viewers">
+  <style> body { font-family: sans-serif; margin: 12px; } </style>
+ </head>
+ <body>
+   <foam class="fsmstudio.FsmWalker"></foam>
+ </body>
+</html>

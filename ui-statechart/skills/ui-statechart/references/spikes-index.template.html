@@ -1,0 +1,285 @@
+<!-- ui-statechart: self-building doorway to every spike. Copy to ignored/index.html (gitignored) and open
+     http://127.0.0.1:8765/ignored/ with the server started at the app checkout root. Nothing to maintain: it reads
+     the server's folder listing of spikes/, then each spike's <title>, <meta name="description">,
+     <meta name="spec"> (the spec section holding its decisions), <meta name="spike-category"> (the group
+     it belongs to on this page) and optional <meta name="spike-scheme"> (a variant name, shown as a
+     badge). A spike with no spike-category meta falls back to CATEGORY_FALLBACK below (keyed by folder
+     name), then to "Other". Add a folder there instead of editing its index.html if you cannot touch it
+     right now. pack-spike.mjs bakes the same fields into window.SPIKES for the file:// dist path — keep
+     both in sync if you add a field. -->
+<html>
+ <head>
+  <meta charset="utf-8">
+  <title>Spikes (throwaway pages)</title>
+  <style>
+    :root {
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: ui-monospace, monospace;
+      --fs-body: 0.9rem;
+      --fs-small: 0.8125rem;
+      --fs-h1: 1.375rem;
+      --fs-h2: 1rem;
+      --sp-1: 0.25rem;
+      --sp-2: 0.5rem;
+      --sp-3: 0.75rem;
+      --sp-4: 1rem;
+      --sp-6: 1.5rem;
+      --radius: 0.375rem;
+      --c-text: #1c1c1c;
+      --c-muted: #55555a;
+      --c-faint: #86868c;
+      --c-border: #dcdcdf;
+      --c-bg: #ffffff;
+      --c-bg-alt: #f7f7f8;
+      --c-link: #0072B2;
+      --c-link-visited: #0059a3;
+      --c-accent-warn: #D55E00;
+      --c-focus: #0072B2;
+      /* Okabe-Ito, decorative accent only — every badge also carries its text label */
+      --c-v1: #0072B2;
+      --c-v2: #D55E00;
+      --c-v3: #009E73;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: var(--font);
+      font-size: var(--fs-body);
+      color: var(--c-text);
+      background: var(--c-bg);
+      margin: 0 auto;
+      padding: var(--sp-6) var(--sp-4) 4rem;
+      max-width: 56rem;
+      line-height: 1.45;
+    }
+    h1 { font-size: var(--fs-h1); margin: 0 0 var(--sp-1); }
+    p.hint { color: var(--c-muted); margin: 0 0 var(--sp-4); font-size: var(--fs-small); }
+    p.hint a { color: var(--c-link); }
+
+    .toolbar {
+      display: flex;
+      gap: var(--sp-3);
+      align-items: center;
+      margin: 0 0 var(--sp-4);
+      position: sticky;
+      top: 0;
+      background: var(--c-bg);
+      padding: var(--sp-2) 0;
+      z-index: 1;
+    }
+    #filter {
+      flex: 1;
+      font-size: var(--fs-body);
+      font-family: var(--font);
+      padding: var(--sp-2) var(--sp-3);
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius);
+      color: var(--c-text);
+      background: var(--c-bg);
+    }
+    #filter:focus { outline: 2px solid var(--c-focus); outline-offset: 1px; }
+    #count { color: var(--c-muted); font-size: var(--fs-small); white-space: nowrap; }
+
+    section.cat { margin: 0 0 var(--sp-6); }
+    section.cat.is-empty { display: none; }
+    h2 {
+      font-size: var(--fs-h2);
+      margin: 0 0 var(--sp-2);
+      padding-bottom: var(--sp-1);
+      border-bottom: 1px solid var(--c-border);
+      display: flex;
+      align-items: baseline;
+      gap: var(--sp-2);
+    }
+    h2 .n { color: var(--c-faint); font-weight: 400; font-size: var(--fs-small); }
+
+    ul.rows { list-style: none; margin: 0; padding: 0; }
+    li.row {
+      padding: var(--sp-2) var(--sp-3);
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius);
+      margin-bottom: var(--sp-2);
+      background: var(--c-bg-alt);
+    }
+    li.row.is-hidden { display: none; }
+    li.row .head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--sp-2);
+    }
+    li.row a.title {
+      font-weight: 600;
+      font-size: var(--fs-body);
+      color: var(--c-link);
+      text-decoration: none;
+    }
+    li.row a.title:hover,
+    li.row a.title:focus { text-decoration: underline; }
+    li.row a.title:visited { color: var(--c-link-visited); }
+
+    .badge {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      padding: 0.0625rem var(--sp-2);
+      border-radius: 999px;
+      border: 1px solid currentColor;
+      white-space: nowrap;
+    }
+    .badge.v1 { color: var(--c-v1); }
+    .badge.v2 { color: var(--c-v2); }
+    .badge.v3 { color: var(--c-v3); }
+
+    .desc {
+      color: var(--c-text);
+      font-size: var(--fs-small);
+      margin-top: var(--sp-1);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .spec {
+      color: var(--c-faint);
+      font-size: 0.75rem;
+      font-family: var(--mono);
+      margin-top: var(--sp-1);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .spec .missing { color: var(--c-accent-warn); font-family: var(--font); }
+
+    #empty {
+      display: none;
+      color: var(--c-muted);
+      padding: var(--sp-4);
+      text-align: center;
+      border: 1px dashed var(--c-border);
+      border-radius: var(--radius);
+    }
+    .err { color: var(--c-accent-warn); white-space: pre-wrap; font-size: var(--fs-small); }
+  </style>
+ </head>
+ <body>
+  <h1>Spikes</h1>
+  <p class="hint">Throwaway pages under <code>ignored/spikes/</code>, grouped by what they're for. New here? <a href="how-to-use.html">How to use these pages</a>. Each title opens its page; the small grey line names where its design decisions live. Reload to pick up new folders.</p>
+  <div class="toolbar">
+    <input id="filter" type="text" placeholder="Filter by name, description or variant…" aria-label="Filter spikes">
+    <span id="count"></span>
+  </div>
+  <div id="list"><p class="hint">Reading spikes/ …</p></div>
+  <div id="empty">No spike matches that filter.</div>
+  <script>
+    (function() {
+      // Fixed display order. A category not in this list (or with zero spikes) still renders, appended
+      // after these, so a new category tagged on a spike is never silently dropped.
+      var CATEGORY_ORDER = [
+        'Machines — FSM viewers',
+        'Two-party conversations',
+        'Forms & tools',
+        'Demos & scaffolding'
+      ];
+      var OTHER = 'Other';
+      // Folders whose own index.html cannot carry a <meta name="spike-category"> right now (e.g. being
+      // rebuilt by someone else) get their category here instead, keyed by folder name.
+      var CATEGORY_FALLBACK = {};
+      // Variant badges take one of three colours in order of first appearance; the text always names the variant (never colour alone).
+      var SCHEME_CLASS = {}, SCHEME_NEXT = 0;
+
+      var listEl = document.getElementById('list');
+      var emptyEl = document.getElementById('empty');
+      var countEl = document.getElementById('count');
+      var filterEl = document.getElementById('filter');
+
+      function esc(s) { return String(s).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+      function badge(scheme) {
+        if ( ! scheme ) return '';
+        if ( ! ( scheme in SCHEME_CLASS ) ) SCHEME_CLASS[scheme] = SCHEME_NEXT < 3 ? 'v' + ( ++SCHEME_NEXT ) : '';
+        var cls = SCHEME_CLASS[scheme];
+        return ' <span class="badge ' + cls + '">' + esc(scheme) + '</span>';
+      }
+
+      function rowHtml(r) {
+        var search = [r.name, r.title, r.desc, r.category, r.scheme].filter(Boolean).join(' ').toLowerCase();
+        return '<li class="row" data-search="' + esc(search) + '">' +
+          '<div class="head"><a class="title" href="spikes/' + encodeURIComponent(r.name) + '/index.html">' + esc(r.title) + '</a>' + badge(r.scheme) + '</div>' +
+          ( r.desc ? '<div class="desc">' + esc(r.desc) + '</div>' : '' ) +
+          '<div class="spec">' + ( r.spec ? 'Based on: ' + esc(r.spec) : '<span class="missing">no &lt;meta name="spec"&gt; on the page</span>' ) + '</div>' +
+          '</li>';
+      }
+
+      function group(rows) {
+        var byCat = {};
+        rows.forEach(function(r) {
+          var cat = r.category || CATEGORY_FALLBACK[r.name] || OTHER;
+          (byCat[cat] = byCat[cat] || []).push(r);
+        });
+        var order = CATEGORY_ORDER.concat(Object.keys(byCat).filter(function(c) { return CATEGORY_ORDER.indexOf(c) === -1 && c !== OTHER; }).sort());
+        if ( byCat[OTHER] ) order.push(OTHER);
+        return order.filter(function(c) { return byCat[c] && byCat[c].length; }).map(function(c) { return { cat: c, rows: byCat[c] }; });
+      }
+
+      function render(rows) {
+        var groups = group(rows);
+        if ( ! groups.length ) { listEl.innerHTML = '<p>No spike folders yet. The ui-statechart loop creates ignored/spikes/&lt;name&gt;/index.html.</p>'; return; }
+        listEl.innerHTML = groups.map(function(g) {
+          return '<section class="cat" data-cat="' + esc(g.cat) + '">' +
+            '<h2>' + esc(g.cat) + ' <span class="n">(' + g.rows.length + ')</span></h2>' +
+            '<ul class="rows">' + g.rows.map(rowHtml).join('') + '</ul>' +
+            '</section>';
+        }).join('');
+        wireFilter(rows.length);
+      }
+
+      function wireFilter(total) {
+        function apply() {
+          var q = filterEl.value.trim().toLowerCase();
+          var shown = 0;
+          document.querySelectorAll('li.row').forEach(function(li) {
+            var hit = ! q || li.getAttribute('data-search').indexOf(q) !== -1;
+            li.classList.toggle('is-hidden', ! hit);
+            if ( hit ) shown++;
+          });
+          document.querySelectorAll('section.cat').forEach(function(sec) {
+            var visible = sec.querySelectorAll('li.row:not(.is-hidden)').length;
+            sec.classList.toggle('is-empty', visible === 0);
+          });
+          emptyEl.style.display = shown === 0 ? 'block' : 'none';
+          countEl.textContent = q ? (shown + ' / ' + total) : (total + ' spike' + (total === 1 ? '' : 's'));
+        }
+        filterEl.addEventListener('input', apply);
+        apply();
+      }
+
+      async function load() {
+        if ( window.SPIKES ) {   // packed folder: pack-spike.mjs baked the list, so the page works from disk (file://) with no server
+          render(window.SPIKES);
+          return;
+        }
+        var names;
+        try {
+          var html = await (await fetch('spikes/', { cache: 'reload' })).text();
+          names = [];
+          html.replace(/href="([^"\/?#]+)\/"/g, function(_, n) { names.push(decodeURIComponent(n)); return _; });
+        } catch (e) {
+          listEl.innerHTML = '<p class="err">Could not read the folder listing of spikes/. Start the server at the app checkout root: python3 -m http.server 8765, then open /ignored/ (python\'s server prints folder listings; other servers may not).</p>';
+          return;
+        }
+        var rows = await Promise.all(names.sort().map(async function(n) {
+          var title = n, desc = '', spec = '', category = '', scheme = '';
+          try {
+            var page = await (await fetch('spikes/' + n + '/index.html', { cache: 'reload' })).text();
+            var m = /<title>([^<]*)<\/title>/i.exec(page); if ( m ) title = m[1].trim();
+            m = /<meta\s+name="description"\s+content="([^"]*)"/i.exec(page); if ( m ) desc = m[1];
+            m = /<meta\s+name="spec"\s+content="([^"]*)"/i.exec(page); if ( m ) spec = m[1];
+            m = /<meta\s+name="spike-category"\s+content="([^"]*)"/i.exec(page); if ( m ) category = m[1];
+            m = /<meta\s+name="spike-scheme"\s+content="([^"]*)"/i.exec(page); if ( m ) scheme = m[1];
+          } catch (e) { title = n + ' (no index.html)'; }
+          return { name: n, title: title, desc: desc, spec: spec, category: category, scheme: scheme };
+        }));
+        render(rows);
+      }
+      load();
+    })();
+  </script>
+ </body>
+</html>

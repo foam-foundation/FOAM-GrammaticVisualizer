@@ -1,0 +1,11 @@
+{
+  "name": "foam-grammatic-visualizer",
+  "owner": { "name": "FOAM Foundation" },
+  "plugins": [
+    {
+      "name": "ui-statechart",
+      "source": "./ui-statechart",
+      "description": "Design a FOAM screen from a states × events table before building it, and walk existing foam.FSM machines as clickable diagrams. Work in progress."
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <title>FOAM starter</title>
+  <!-- 1. the framework, one file, already built -->
+  <script src="../foam-bin-3.js"></script>
+  <!-- 2. your app: edit this file, reload the page -->
+  <script src="app.js"></script>
+  <style>
+    /* FOAM follows the OS light/dark setting. Paint the page the same way so inputs never sit dark on white. */
+    :root { color-scheme: light dark; }
+    body { font-family: sans-serif; margin: 16px 24px; background: #fff; color: #222; }
+    @media (prefers-color-scheme: dark) { body { background: #0f0f0f; color: #f0f2f5; } }
+    a { color: #0072B2; }
+  </style>
+ </head>
+ <body>
+  <p><b>FOAM starter</b> &middot; edit <code>app.js</code>, reload &middot; <a href="how-to.html">how to use this</a></p>
+  <!-- 3. the tag below asks FOAM to create this class and put it here -->
+  <foam class="starter.App"></foam>
+ </body>
+</html>

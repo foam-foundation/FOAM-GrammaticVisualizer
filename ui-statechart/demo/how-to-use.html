@@ -1,0 +1,78 @@
+<!-- ui-statechart: the reader-facing "how to use this" page. Generic on purpose: it describes the three page kinds
+     the skill produces, not any one domain. Copy once to ignored/how-to-use.html for local use; pack-spike.mjs copies
+     it into every packed folder as how-to-use.html. The walker and conversation shells link here as "? how to use". -->
+<html>
+ <head>
+  <meta charset="utf-8">
+  <title>How to use these pages</title>
+  <style>
+    body { font-family: sans-serif; margin: 16px 24px; max-width: 860px; line-height: 1.45; color: #222; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    h2 { font-size: 16px; margin: 22px 0 6px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }
+    p, li { font-size: 14px; }
+    p.lead { color: #444; margin: 0 0 12px; }
+    ol, ul { padding-left: 20px; margin: 4px 0 8px; }
+    li { margin: 3px 0; }
+    code { font: 12.5px ui-monospace, monospace; background: #f3f3f3; border-radius: 4px; padding: 1px 5px; }
+    pre { background: #f3f3f3; border-radius: 6px; padding: 8px 10px; font: 12.5px/1.4 ui-monospace, monospace; overflow-x: auto; }
+    .sw { display: inline-block; width: 22px; height: 12px; vertical-align: middle; margin-right: 5px; border-radius: 3px; border: 1px solid #c8c8c8; background: #fafafa; }
+    .sw.here { background: #eaf3fb; border: 3px solid #0072B2; }
+    .sw.can { background: #fff; border: 2px dashed #0072B2; }
+    .sw.hover { background: #fff3d6; border: 2px solid #E69F00; }
+    .sw.dim { opacity: .35; }
+    .b { color: #0072B2; font-weight: 600; }
+    .p { color: #CC79A7; font-weight: 600; }
+    a { color: #0072B2; }
+    .note { border-left: 4px solid #E69F00; background: #fff7e6; padding: 6px 10px; border-radius: 3px; font-size: 13px; }
+  </style>
+ </head>
+ <body>
+  <h1>How to use these pages</h1>
+  <p class="lead">These pages are <b>drawings you can click</b>. Each one shows the steps something can be in (a screen, a record) and which step can come next. Clicking changes nothing real. Close the tab and nothing happened.</p>
+
+  <h2>Opening the folder you were sent</h2>
+  <ol>
+    <li>Unzip the folder.</li>
+    <li>Double-click <b>index.html</b>. It opens in your browser. That is the front door: it lists every page with a one-line description.</li>
+  </ol>
+  <ul>
+    <li>The drawing tool loads from the internet. Without a connection the page opens but the drawing stays blank.</li>
+    <li>If a page stays blank in your browser, see <a href="#server">If double-click does not work</a> below.</li>
+  </ul>
+
+  <h2 id="server">If double-click does not work</h2>
+  <p>The fallback is a small web server. It needs Python. <b>Check first, so nothing crashes:</b></p>
+  <ol>
+    <li>Open a terminal <b>inside the unzipped folder</b> (Mac: Terminal; Windows: right-click the folder, "Open in Terminal").</li>
+    <li>Type this and press Enter:
+      <pre>python3 --version</pre>
+      On Windows, if that says it is not recognised, try <code>py --version</code>.</li>
+    <li><b>You see a version</b> (for example <code>Python 3.12.4</code>): you are good. Run
+      <pre>python3 -m http.server 8767</pre>
+      (or <code>py -m http.server 8767</code> on Windows), then open <a href="http://127.0.0.1:8767/index.html">http://127.0.0.1:8767/index.html</a>. Press Ctrl+C in that terminal to stop it.</li>
+    <li><b>You see "command not found" or "not recognised"</b>: your computer cannot run the server. Stop here, do not run any other command. Go back to double-clicking <b>index.html</b>: the folder is built to work straight from disk, and the server is only a spare. If the page still stays blank, tell whoever sent you the folder.</li>
+  </ol>
+
+  <h2>Reading any drawing</h2>
+  <ul>
+    <li><b>Cards are steps</b> (the code calls them states). <b>Boxes around cards are groups</b>: steps that belong together.</li>
+    <li><b>Arrows are allowed moves.</b> No arrow between two cards means that move cannot happen.</li>
+    <li><span class="sw here"></span><b>Solid blue, thick border</b> = where you are now.</li>
+    <li><span class="sw can"></span><b>Dashed blue</b> = one click away.</li>
+    <li><span class="sw hover"></span><b>Amber</b> = the card under your mouse and the cards it connects to. Everything else fades so the arrows stand out.</li>
+    <li><span class="sw dim"></span><b>Greyed</b> = you cannot get there from where you are.</li>
+    <li><b>Hover anything</b> for a tooltip: what the step means, whose turn it is, how long they have, where in the code it lives.</li>
+    <li><b>Click a card</b> to move there. If the move is not allowed, the message line says why in words.</li>
+    <li>Every colour also has a border style or a symbol, so the page still makes sense printed in black and white.</li>
+  </ul>
+
+  <h2>The three kinds of page</h2>
+  <p><b>1. Design spike</b> (a screen being designed). The design fills the top of the page. The dark <b>Spike controls</b> strip above it switches sample data or layouts; it is not part of the design. The tabs below carry their status in the label: <b>Try this round</b> is the list of things to click and check, <b>Statechart</b> draws every step and move of the design, <b>Ask the expert</b> lists open questions, <b>Legend</b> and <b>Log</b> explain what you see and what just happened. A disabled button should say why next to it (the worked examples show a clock icon and <i>Why not yet</i>).</p>
+  <p><b>2. Walker</b> (title ends in <i>read-only walker</i>). One machine per tab, drawn as a row of steps. Click the next step to move. <code>↩ back</code> undoes one move. <code>⟲ reset</code> goes back to the start. <i>[guard]</i> on an arrow means a rule in the code decides whether that move is allowed; where the page can read the rule, it shows the rule's own refusal text. Open <b>legend</b> under the drawing for the colour key.</p>
+  <p><b>3. Conversation</b> (two parties, one exchange). <span class="b">Left side, blue</span> and <span class="p">right side, pink</span> are the two parties. Pick a <b>story</b> to replay a known sequence: <code>play</code> takes the next step, <code>↶ undo</code> and <code>↷ redo</code> step back and forward, <code>⟲ reset</code> returns to the start with the story still chosen. The right column lists <b>what happened, newest first</b>, each row naming the code that does it. Open <b>legend, sources and caveats</b> to see what is wired in code versus assumed.</p>
+
+  <h2>What these pages are for</h2>
+  <p>They are <b>throwaway drawings</b> made to settle design questions by clicking instead of arguing. The page is scaffolding; the write-up it points at (the <i>Based on</i> line on the front door) is the record. If something looks wrong, say so. That is the point: the drawing changes before any real screen gets built.</p>
+  <p class="note">Nothing here writes to any system. Refreshing resets a walker or a conversation.</p>
+ </body>
+</html>

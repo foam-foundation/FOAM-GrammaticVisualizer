@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <title>How to use the FOAM starter</title>
+  <style>
+    body { font-family: sans-serif; margin: 16px 24px; max-width: 800px; line-height: 1.45; color: #222; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    h2 { font-size: 16px; margin: 22px 0 6px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }
+    p, li { font-size: 14px; }
+    code { font: 12.5px ui-monospace, monospace; background: #f3f3f3; border-radius: 4px; padding: 1px 5px; }
+    pre { background: #f3f3f3; border-radius: 6px; padding: 8px 10px; font: 12.5px/1.4 ui-monospace, monospace; overflow-x: auto; }
+    a { color: #0072B2; }
+  </style>
+ </head>
+ <body>
+  <h1>How to use the FOAM starter</h1>
+  <p>Four files, plus the framework one folder up. You edit one of them. No install, no build.</p>
+
+  <h2>1. Run it</h2>
+  <ol>
+    <li>Open a terminal inside the folder above this one (<code>demo/</code>), so the page can reach the framework file.</li>
+    <li>Run: <pre>python3 -m http.server 8000</pre> (any static file server works; double-clicking the page mostly works too, but some features need a server).</li>
+    <li>Open <a href="http://127.0.0.1:8000/starter/">http://127.0.0.1:8000/starter/</a>.</li>
+  </ol>
+
+  <h2>2. What each file is</h2>
+  <ul>
+    <li><code>../foam-bin-3.js</code> (one folder up): the whole framework in one file. Do not edit.</li>
+    <li><code>index.html</code>: loads the framework, loads your app, and has one tag: <code>&lt;foam class="starter.App"&gt;</code>. That tag means "create this class and put it here".</li>
+    <li><code>app.js</code>: your code. A <b>model</b> (a Todo has a title, a due date, a done flag) and a <b>view</b> (a form, a button, a table). Edit, save, reload.</li>
+    <li><code>tools/build-bin.mjs</code>: rebuilds the framework file from a FOAM3 checkout. Only if you want a newer FOAM. Ignore at first.</li>
+  </ul>
+
+  <h2>3. Things to try, in order</h2>
+  <ol>
+    <li>Add a property to <code>Todo</code>: <code>{ class: 'Int', name: 'priority' }</code>. Reload. The form and the table both grew. You wrote no HTML.</li>
+    <li>Change <code>class: 'Date'</code> to <code>class: 'DateTime'</code>. Reload. Different input.</li>
+    <li>Change the seed rows in <code>init()</code>.</li>
+    <li>Make <code>add</code> refuse empty titles differently: edit <code>isEnabled</code>.</li>
+    <li>In the browser console: <code>foam.lookup('starter.Todo').create({ title: 'x' })</code>. Every class you declare is reachable by name.</li>
+  </ol>
+
+  <h2>4. The ideas you just used</h2>
+  <ul>
+    <li><b>Model</b>: <code>foam.CLASS({...})</code> declares a class from data. Properties carry a type, so FOAM can draw inputs, table columns, and validation from the same declaration.</li>
+    <li><b>DAO</b>: a collection with <code>put</code>, <code>find</code>, <code>select</code>, <code>remove</code>. In memory here. The same calls work against a server or a browser database later; only <code>daoType</code> changes.</li>
+    <li><b>View</b>: <code>foam.u2.Element</code>. <code>start()</code>/<code>end()</code>/<code>add()</code> build the page. Passing a property (upper case, <code>this.TODO</code>) adds that property's own view.</li>
+    <li><b>Reactivity</b>: the table watches the DAO, the button watches the title. Nothing polls, nothing re-renders by hand.</li>
+  </ul>
+
+  <h2>5. Read next</h2>
+  <p>FOAM3 source and guides: <a href="https://github.com/foam-foundation/foam3">github.com/foam-foundation/foam3</a>, folder <code>doc/guides</code>. Start with <code>Concepts.md</code>, then <code>Dao.md</code>, then <code>Actions.md</code>. Small runnable examples live in <code>src/foam/demos/</code>.</p>
+ </body>
+</html>
