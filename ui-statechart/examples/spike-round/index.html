@@ -1,0 +1,19 @@
+<!-- Worked example of the ui-statechart skill: spike round. Decisions in spec.md. To run it, copy this folder to <app>/ignored/spikes/spike-round/ (the skill at <app>/.claude/skills/ui-statechart/, foam3 at <app>/foam3/), run python3 -m http.server 8765 from <app>, then open http://127.0.0.1:8765/ignored/spikes/spike-round/index.html -->
+<html>
+ <head>
+  <meta charset="utf-8">
+  <script language="javascript" src="../../../foam3/src/foam.js" project="../../../foam3/src/pom,../../../.claude/skills/ui-statechart/references/fsm-pom"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral", state: { useMaxWidth: false } });</script>
+  <script src="../../../.claude/skills/ui-statechart/references/spike-diagram.js"></script>
+  <script src="../../../.claude/skills/ui-statechart/references/spike-shell.js"></script>
+  <script language="javascript" src="SpikeView.js"></script>
+  <title>Spike round</title>
+  <meta name="description" content="The ui-statechart tool modelled with itself: where is one design spike in its life, and what blocks the next move?">
+  <meta name="spec" content="spec.md in this folder: frame, statechart, decisions and one addendum per round.">
+  <style>body { font-family: sans-serif; margin: 12px 16px; }</style>
+ </head>
+ <body>
+   <foam class="fsmstudio.SpikeRoundView"></foam>
+ </body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "ui-statechart",
+  "version": "0.1.0",
+  "description": "Design a FOAM screen from a states × events table before building it: a foam.FSM, a throwaway page the user clicks, and every decision written into a spec. Also walks existing foam.FSM machines as clickable diagrams. Work in progress.",
+  "author": { "name": "Ajeet Gill" },
+  "license": "Apache-2.0",
+  "keywords": [ "foam", "foam3", "state machine", "statechart", "fsm", "ui design", "prototype" ]
+}

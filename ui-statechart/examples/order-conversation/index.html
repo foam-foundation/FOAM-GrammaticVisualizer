@@ -1,0 +1,22 @@
+<!-- Demo for the ui-statechart skill: two parties, one order. To run it from source, copy this folder and ../order-walker to
+     <app>/ignored/spikes/ (skill at <app>/.claude/skills/ui-statechart/, foam3 at <app>/foam3/) and serve <app>. -->
+<html>
+ <head>
+  <meta charset="utf-8">
+  <script language="javascript" src="../../../foam3/src/foam.js" project="../../../foam3/src/pom,../../../.claude/skills/ui-statechart/references/fsm-pom"></script>
+  <script language="javascript" src="../order-walker/machines.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "neutral", state: { useMaxWidth: false } });</script>
+  <script src="../../../.claude/skills/ui-statechart/references/spike-diagram.js"></script>
+  <script language="javascript" src="../../../.claude/skills/ui-statechart/references/two-party.template.js"></script>
+  <script language="javascript" src="config.js"></script>
+  <title>Online order: buyer and seller</title>
+  <meta name="description" content="What does each side see when the other moves? Replay an order between a buyer and a seller, including one designed-in gap">
+  <meta name="spec" content="config.js in this folder, over the demo machines in ../order-walker/machines.js: a small public demo, not a real product.">
+  <meta name="spike-category" content="Two-party conversations">
+  <style> body { font-family: sans-serif; margin: 12px; } </style>
+ </head>
+ <body>
+   <foam class="fsmstudio.TwoPartyConversation"></foam>
+ </body>
+</html>
