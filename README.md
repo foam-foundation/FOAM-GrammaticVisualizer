@@ -17,6 +17,8 @@ cd FOAM-GrammaticVisualizer
 python3 -m http.server 8000
 ```
 
+If the `foam3/` folder is empty (a clone made without `--recurse-submodules`), fill it with `git submodule update --init`.
+
 Open http://localhost:8000/demo/index.html. The page loads FOAM from source, so it needs no build. Pick a preset, press **Parse**, then step with the buttons beside it.
 
 Query parameters load your own files. Every URL has to be on the same origin as the page:
