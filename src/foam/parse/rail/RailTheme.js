@@ -50,59 +50,81 @@ foam.CLASS({
     STROKE_PULSE: 3,   // extra width at pulse = 1, decaying to 0
     BRANCH_STROKE: 1.5,
     BRANCH_STROKE_VISITED: 2.5,
-    RULE_LABEL_FLASH_ALPHA: 0.35
+    RULE_LABEL_FLASH_ALPHA: 0.35,
+    // cssTokens that colors reads for the SVG strips, ribbon canvas and tooltip.
+    COLOR_TOKENS: [ 'track', 'text', 'muted', 'terminalBg', 'ruleRefBg', 'frameBg', 'genericBg', 'gateBg',
+                    'outcomeNONE', 'outcomeTRYING', 'outcomeMATCHED', 'outcomeFAILED',
+                    'consumedBg', 'failBg', 'ribbonBg', 'tooltipBg', 'tooltipText' ]
   },
 
   cssTokens: [
-    // Colours for the HTML panels around the diagram (page, derivation, document view),
-    // referenced as $foam.parse.rail.RailTheme.<name> so every panel shares one palette.
-    // The outcome colours repeat the Okabe-Ito values in colors below, so a panel row
-    // and the box it points at always match.
-    { name: 'ink',            value: '#222' },     // body text
-    { name: 'inkSecondary',   value: '#444' },     // headings, legend text
-    { name: 'inkMuted',       value: '#6b6b6b' },  // hints, spans, counts
-    { name: 'inkUnreached',   value: '#888' },     // document text the parse never reached
-    { name: 'inkOnDark',      value: '#fff' },     // text on a coloured chip or the tooltip
-    { name: 'line',           value: '#ccc' },     // panel borders
-    { name: 'lineSoft',       value: '#e4e4e4' },  // section dividers
-    { name: 'matched',        value: '#0072B2' },  // Outcome MATCHED
-    { name: 'trying',         value: '#E69F00' },  // Outcome TRYING
-    { name: 'tryingText',     value: '#B87A00' },  // TRYING as text: darker, readable on white
-    { name: 'failed',         value: '#D55E00' },  // Outcome FAILED
-    { name: 'terminalBorder', value: '#d9c98d' },  // edge of a terminal chip (fill is colors.terminalBg)
-    { name: 'filterBorder',   value: '#f0d890' },  // edge of the derivation filter bar
-    // Surfaces. The viewer is a light design whatever the host app's theme is, so the
-    // page colours are tokens of its own rather than the app's $backgroundDefault.
-    { name: 'page',           value: '#fff' },     // viewer background
-    { name: 'pageVeil',       value: 'rgba(255,255,255,0.96)' },  // legend panel over the canvas
-    { name: 'statusBg',       value: '#fafafa' },  // status line
-    { name: 'splitter',       value: '#eee' },     // column splitter
-    { name: 'highlightSoft',  value: '#d6e8f5' },  // splitter hover; consumed input in the document view
-    { name: 'highlightHot',   value: '#cfe0f5' },  // the document span the current step is on
-    { name: 'rowHover',       value: '#f1f5fb' },  // derivation row under the pointer
-    { name: 'rowSelected',    value: '#e6eefc' },  // derivation row that was clicked
-    { name: 'guide',          value: '#d8d8d8' },  // depth guide lines in the derivation
-    { name: 'leafBg',         value: '#fff7d6' },  // terminal chip in the derivation (matches colors.terminalBg)
-    { name: 'textChipBg',     value: '#f1f1f1' },  // matched-text chip in the derivation
-    { name: 'filterBg',       value: '#fff7e0' },  // derivation filter bar
-    { name: 'openBg',         value: '#fff1cc' },  // document span of a rule still being tried
-    { name: 'diedBg',         value: '#f8d9c4' },  // document span where the parse failed
-    { name: 'tooltipBg',      value: 'rgba(34, 34, 34, 0.92)' }
+    // One palette for the HTML panels (css: blocks reference $foam.parse.rail.RailTheme.<name>)
+    // and the diagram (colors below reads the same tokens), so a panel row and the box it
+    // points at always match. Each token carries a dark variant: when the host app's theme
+    // sets activeVariants.color = 'dark' (foam.lang.Window), css: blocks re-expand on their
+    // own and refresh() re-reads colors for the SVG and canvas. Surfaces, ink and lines follow
+    // the app's semantic tokens in dark so the viewer sits on the app's own dark surface; the
+    // tints are the light ones darkened by hand. The standalone demo has no host theme and
+    // stays light. The outcome colours are Okabe-Ito (colourblind-safe); MATCHED and FAILED
+    // lighten in dark so they keep contrast on #202020.
+    { name: 'ink',            value: '#222',    variantKey: 'color', variants: { dark: { value: '$textDefault' } } },     // body text
+    { name: 'inkSecondary',   value: '#444',    variantKey: 'color', variants: { dark: { value: '$textSecondary' } } },   // headings, legend text
+    { name: 'inkMuted',       value: '#6b6b6b', variantKey: 'color', variants: { dark: { value: '$textTertiary' } } },    // hints, spans, counts
+    { name: 'inkUnreached',   value: '#888',    variantKey: 'color', variants: { dark: { value: '#7a7a7a' } } },          // document text the parse never reached
+    { name: 'inkOnDark',      value: '#fff' },                                                                            // text on a coloured chip or the tooltip
+    { name: 'line',           value: '#ccc',    variantKey: 'color', variants: { dark: { value: '$borderDefault' } } },   // panel borders
+    { name: 'lineSoft',       value: '#e4e4e4', variantKey: 'color', variants: { dark: { value: '$borderLight' } } },     // section dividers
+    { name: 'matched',        value: '#0072B2', variantKey: 'color', variants: { dark: { value: '#4aa3e0' } } },          // Outcome MATCHED
+    { name: 'trying',         value: '#E69F00' },                                                                         // Outcome TRYING
+    { name: 'tryingText',     value: '#B87A00', variantKey: 'color', variants: { dark: { value: '#f0b429' } } },          // TRYING as text: readable on the page colour
+    { name: 'failed',         value: '#D55E00', variantKey: 'color', variants: { dark: { value: '#f0813a' } } },          // Outcome FAILED
+    { name: 'terminalBorder', value: '#d9c98d', variantKey: 'color', variants: { dark: { value: '#8a7a3a' } } },          // edge of a terminal chip (fill is terminalBg)
+    { name: 'filterBorder',   value: '#f0d890', variantKey: 'color', variants: { dark: { value: '#8a7a3a' } } },          // edge of the derivation filter bar
+    // Surfaces
+    { name: 'page',           value: '#fff',    variantKey: 'color', variants: { dark: { value: '$backgroundDefault' } } },   // viewer background
+    { name: 'pageVeil',       value: 'rgba(255,255,255,0.96)', variantKey: 'color', variants: { dark: { value: 'rgba(32,32,32,0.94)' } } },  // legend panel over the canvas
+    { name: 'statusBg',       value: '#fafafa', variantKey: 'color', variants: { dark: { value: '$backgroundSecondary' } } }, // status line
+    { name: 'splitter',       value: '#eee',    variantKey: 'color', variants: { dark: { value: '$backgroundTertiary' } } },  // column splitter
+    { name: 'sceneBg',        value: '#fafafa', variantKey: 'color', variants: { dark: { value: '#262626' } } },          // canvas behind the strips; also the priority-number halo
+    { name: 'ribbonBg',       value: '#fff',    variantKey: 'color', variants: { dark: { value: '$backgroundDefault' } } },   // input ribbon canvas
+    { name: 'highlightSoft',  value: '#d6e8f5', variantKey: 'color', variants: { dark: { value: '#1e3a52' } } },          // splitter hover; consumed input
+    { name: 'highlightHot',   value: '#cfe0f5', variantKey: 'color', variants: { dark: { value: '#27496a' } } },          // the document span the current step is on
+    { name: 'rowHover',       value: '#f1f5fb', variantKey: 'color', variants: { dark: { value: '#2a2f38' } } },          // derivation row under the pointer
+    { name: 'rowSelected',    value: '#e6eefc', variantKey: 'color', variants: { dark: { value: '#243447' } } },          // derivation row that was clicked
+    { name: 'guide',          value: '#d8d8d8', variantKey: 'color', variants: { dark: { value: '#444' } } },             // depth guide lines in the derivation
+    { name: 'leafBg',         value: '#fff7d6', variantKey: 'color', variants: { dark: { value: '#4a4020' } } },          // terminal chip in the derivation (matches terminalBg)
+    { name: 'textChipBg',     value: '#f1f1f1', variantKey: 'color', variants: { dark: { value: '#373737' } } },          // matched-text chip in the derivation
+    { name: 'filterBg',       value: '#fff7e0', variantKey: 'color', variants: { dark: { value: '#3d3520' } } },          // derivation filter bar
+    { name: 'openBg',         value: '#fff1cc', variantKey: 'color', variants: { dark: { value: '#4a3f14' } } },          // document span of a rule still being tried
+    { name: 'diedBg',         value: '#f8d9c4', variantKey: 'color', variants: { dark: { value: '#5a2e1a' } } },          // document span where the parse failed
+    { name: 'tooltipBg',      value: 'rgba(34, 34, 34, 0.92)', variantKey: 'color', variants: { dark: { value: 'rgba(60, 60, 60, 0.96)' } } },
+    { name: 'tooltipText',    value: '#fff' },
+    // Diagram (SVG strips, read through colors below)
+    { name: 'track',          value: '#555',    variantKey: 'color', variants: { dark: { value: '#b0b0b0' } } },          // rails between boxes
+    { name: 'text',           value: '#222',    variantKey: 'color', variants: { dark: { value: '$textDefault' } } },     // box labels, rule names, values
+    { name: 'muted',          value: '#777',    variantKey: 'color', variants: { dark: { value: '#9a9a9a' } } },          // badges, counters, frames, priority discs
+    { name: 'terminalBg',     value: '#fff7d6', variantKey: 'color', variants: { dark: { value: '#4a4020' } } },          // terminal box fill
+    { name: 'ruleRefBg',      value: '#e8f0ff', variantKey: 'color', variants: { dark: { value: '#243447' } } },          // rule reference box fill
+    { name: 'frameBg',        value: 'rgba(232,240,255,0.35)', variantKey: 'color', variants: { dark: { value: 'rgba(36,52,71,0.45)' } } },  // unfolded rule frame
+    { name: 'genericBg',      value: '#e5e5e5', variantKey: 'color', variants: { dark: { value: '#3a3a3a' } } },          // parser with no drawing yet
+    { name: 'gateBg',         value: '#f3f3f3', variantKey: 'color', variants: { dark: { value: '#2e2e2e' } } },          // not/peek gate
+    { name: 'outcomeNONE',    value: '#555',    variantKey: 'color', variants: { dark: { value: '#b0b0b0' } } },
+    { name: 'outcomeTRYING',  value: '#E69F00' },
+    { name: 'outcomeMATCHED', value: '#0072B2', variantKey: 'color', variants: { dark: { value: '#4aa3e0' } } },
+    { name: 'outcomeFAILED',  value: '#D55E00', variantKey: 'color', variants: { dark: { value: '#f0813a' } } },
+    { name: 'consumedBg',     value: '#d6e8f5', variantKey: 'color', variants: { dark: { value: '#1e3a52' } } },          // ribbon: consumed prefix
+    { name: 'failBg',         value: '#f8d9c4', variantKey: 'color', variants: { dark: { value: '#5a2e1a' } } }           // ribbon: the character the parse died on
   ],
 
   properties: [
     {
       name: 'colors',
+      documentation: 'Token name -> CSS colour, read from cssTokens for the active colour variant; refresh() re-reads after a switch.',
       factory: function() {
-        return {
-          track: '#555', text: '#222', muted: '#777',
-          terminalBg: '#fff7d6', ruleRefBg: '#e8f0ff', frameBg: 'rgba(232,240,255,0.35)',
-          genericBg: '#e5e5e5', gateBg: '#f3f3f3',
-          // Okabe-Ito, colourblind-safe; no green/red pair anywhere. One token per Outcome name.
-          outcomeNONE: '#555', outcomeTRYING: '#E69F00', outcomeMATCHED: '#0072B2', outcomeFAILED: '#D55E00',
-          consumedBg: '#d6e8f5', failBg: '#f8d9c4',
-          tooltipBg: '#222', tooltipBorder: '#222', tooltipText: '#fff'
-        };
+        var self = this, c = {};
+        this.COLOR_TOKENS.forEach(function(name) { c[name] = self.token(name); });
+        c.tooltipBorder = c.tooltipBg;
+        return c;
       }
     },
     {
@@ -120,10 +142,21 @@ foam.CLASS({
         };
       }
     },
-    { class: 'String', name: 'background', value: '#fafafa' }
+    { class: 'String', name: 'background', factory: function() { return this.token('sceneBg'); } }
   ],
 
   methods: [
+    function token(name) {
+      /** A cssToken of this class resolved for the current colour variant (the host theme in the context, if any). */
+      return foam.CSS.returnTokenValue('$' + this.cls_.id + '.' + name, this.cls_, this.__subContext__);
+    },
+
+    function refresh() {
+      /** Drop the resolved colours so the next read follows the colour variant now active. */
+      this.clearProperty('colors');
+      this.clearProperty('background');
+    },
+
     function outcomeColor(outcome) {
       /** Colour token for an Outcome enum value: "outcome" + its name. */
       return this.resolve('outcome' + outcome.name);
