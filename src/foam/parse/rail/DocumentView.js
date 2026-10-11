@@ -28,14 +28,14 @@ foam.CLASS({
     ^legend b { font-weight: normal; padding: 0 3px; }
     ^body { flex: 1; min-height: 0; overflow: auto; padding: 4px 8px 8px; }
     ^line { position: relative; font-size: 13px; line-height: 1.5; font-family: monospace; white-space: pre; color: $foam.parse.rail.RailTheme.ink; min-height: 1.5em; }
-    ^consumed { background: #d6e8f5; }
-    ^open { background: #fff1cc; }
+    ^consumed { background: $foam.parse.rail.RailTheme.highlightSoft; }
+    ^open { background: $foam.parse.rail.RailTheme.openBg; }
     ^probe { outline: 2px solid $foam.parse.rail.RailTheme.trying; outline-offset: -1px; }
-    ^died { background: #f8d9c4; outline: 2px solid $foam.parse.rail.RailTheme.failed; outline-offset: -1px; }
+    ^died { background: $foam.parse.rail.RailTheme.diedBg; outline: 2px solid $foam.parse.rail.RailTheme.failed; outline-offset: -1px; }
     ^unreached { color: $foam.parse.rail.RailTheme.inkUnreached; }
     ^rule { border-bottom: 2px solid $foam.parse.rail.RailTheme.matched; }   /* colour overridden per depth */
     ^pending { border-bottom-style: dashed; border-bottom-color: $foam.parse.rail.RailTheme.trying !important; }
-    ^hot { background: #cfe0f5; }
+    ^hot { background: $foam.parse.rail.RailTheme.highlightHot; }
     ^at { position: absolute; }
     ^chip { display: inline-block; font-size: 11px; line-height: 1.2; font-family: sans-serif; color: $foam.parse.rail.RailTheme.inkOnDark; background: $foam.parse.rail.RailTheme.matched; border-radius: 3px; padding: 1px 5px; cursor: pointer; white-space: nowrap; border: 2px solid transparent; }
     ^chip:hover { outline: 2px solid $foam.parse.rail.RailTheme.ink; }
