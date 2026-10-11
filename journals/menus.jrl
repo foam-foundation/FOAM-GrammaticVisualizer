@@ -1,0 +1,27 @@
+p({
+  "class":"foam.core.menu.Menu",
+  "id":"grammaticVisualizer.sentence",
+  "label":"Sentence",
+  "authenticate":true,
+  "keywords":[""],
+  "handler":{
+    "class":"foam.core.menu.DAOMenu2",
+    "config":{
+      "class":"foam.comics.v2.DAOControllerConfig",
+      "daoKey":"sentenceDAO"
+    }
+  }
+})
+
+// Reflow console - notebook for querying DAOs
+p({
+  "class":"foam.core.menu.Menu",
+  "id":"grammaticVisualizer.reflow",
+  "label":"Reflow",
+  "authenticate":true,
+  "keywords":["reflow","flow","query"],
+  "handler":{
+    "class":"foam.core.menu.ViewMenu",
+    "view":{"class":"foam.core.reflow.Console"}
+  }
+})

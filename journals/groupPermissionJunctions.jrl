@@ -1,0 +1,40 @@
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"user.readByGroup.grammaticVisualizer"})
+
+// FOAM
+// simple password management
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.reset-password"})
+
+// spid
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"serviceprovider.read.grammaticVisualizer"})
+
+// Password
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.passwordDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.password"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"password.create"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"password.read.*"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"password.update.*"})
+
+// specific model
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.sentenceDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"sentence.create"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"sentence.read.*"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"sentence.update.*"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"sentence.delete.*"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.sentence"})
+
+// Reflow console
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.reflow"})
+// hidden console menu Flow.js routes to when opening a saved flow
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.flow_"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.flowDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.flowHistoryDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.commandDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.agentDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.toolbarControlDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"command.read.*"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"sinkagent.read.*"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"toolbarcontrol.read.*"})
+
+// DAOs queryable from Reflow (AuthenticatedCSpecDAO lists services the user can read)
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.AuthenticatedCSpecDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.read.sentenceDAO"})
