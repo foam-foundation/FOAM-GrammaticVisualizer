@@ -44,6 +44,20 @@ foam.CLASS({
         'STROKE_BASE', 'STROKE_VISITED', 'STROKE_HIGHLIGHT', 'STROKE_PULSE', 'BRANCH_STROKE', 'BRANCH_STROKE_VISITED' ]
         .forEach(function(k) { x.test(typeof t[k] === 'number', 'geometry constant ' + k + ' is a number'); });
 
+      // Every colour the diagram reads is a real colour value, never a failed-token comment.
+      this.RailTheme.COLOR_TOKENS.forEach(function(name) { x.test(/^(#|rgb)/.test(t.resolve(name)), 'colour token "' + name + '" resolves to a colour: ' + t.resolve(name)); });
+
+      // With a host theme whose colour variant is dark, ink and surfaces differ from light; refresh() follows a switch.
+      // (Compared against an explicit light variant, not the default: the test page's own theme may already be dark.)
+      var variant = function(v) { return x.createSubContext({ theme: { activeVariants: { color: v } } }); };
+      var dark = this.RailTheme.create(null, variant('dark')), light = this.RailTheme.create(null, variant('light'));
+      x.test(dark.resolve('text') !== light.resolve('text') && dark.background !== light.background && dark.resolve('ruleRefBg') !== light.resolve('ruleRefBg'), 'dark variant changes ink, scene background and box fills');
+      x.test(/^(#|rgb)/.test(dark.resolve('text')) && /^(#|rgb)/.test(dark.background), 'dark values resolve through the app tokens to colours: ' + dark.resolve('text') + ' ' + dark.background);
+      x.test(light.resolve('text') === '#222' && light.background === '#fafafa', 'light variant is the viewer\'s own light palette');
+      var sw = this.RailTheme.create(null, variant('light')); sw.resolve('text');
+      sw.__subContext__.theme.activeVariants.color = 'dark'; sw.refresh();
+      x.test(sw.resolve('text') === dark.resolve('text') && sw.background === dark.background, 'refresh() re-reads the colours for the variant now active');
+
       // ParserIds: same object, same id; different objects, different ids.
       var P = foam.parse.rail.ParserIds, a = {}, b = {};
       x.test(P.idOf(a) === P.idOf(a) && P.idOf(a) !== P.idOf(b), 'idOf is stable per object and distinct across objects');

@@ -33,6 +33,8 @@ foam.CLASS({
     'foam.parse.rail.Tier'
   ],
 
+  imports: [ 'theme? as hostTheme' ],
+
   css: `
     ^ { font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; overflow: hidden; background: $foam.parse.rail.RailTheme.page; color: $foam.parse.rail.RailTheme.ink; }
     ^bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 6px 8px; border-bottom: 1px solid $foam.parse.rail.RailTheme.line; flex: none; }
@@ -225,6 +227,11 @@ foam.CLASS({
 
       // The scene owns the pointer; clicks that did not drag come back here.
       this.scene.onHit = function(el, e) { self.onHit(el, e); };
+
+      // A host app flips theme.activeVariants.color on a light/dark switch. The css: blocks
+      // re-expand on their own (foam.u2.CSS.reloadStyles); the scene's generated stylesheet
+      // and the ribbon canvas are repainted here. The standalone demo has no host theme.
+      if ( this.hostTheme ) this.onDetach(this.hostTheme.activeVariants$.sub(function() { self.scene.refreshTheme(); self.ribbon.invalidate(); }));
 
       this.scanRegistered();
 
