@@ -123,6 +123,11 @@ foam.CLASS({
       x.test(snap.valuesOf(ab.args[0]).join(',') === 'a,a', 'literal a inside the loop: one entry per iteration');
       x.test(snap.valuesOf({}).length === 0, 'unknown parser: empty');
       x.test(snap.valuesByParser() === snap.valuesByParser(), 'the map is cached on the snapshot');
+
+      // A grammar without the start rule: a clear error, not a TypeError from inside getSymbol.
+      var g5 = this.Grammar.create({ symbols: function() { return {}; } }), e5 = null;
+      try { this.ParseTrace.create({ grammar: g5, startSymbol: 'START', input: 'x' }).record(); } catch (e) { e5 = e; }
+      x.test(e5 && e5.message === 'no rule named START in the grammar', 'missing start rule is reported by name: ' + ( e5 && e5.message ));
     }
   ]
 });

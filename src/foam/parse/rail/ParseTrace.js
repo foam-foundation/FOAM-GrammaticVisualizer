@@ -46,7 +46,9 @@ foam.CLASS({
         events.push({ type: 'done', p: p, start: start, end: res ? res.pos : null });
         return res;
       };
-      var startP = this.grammar.getSymbol(this.startSymbol), result, err;
+      var startP, result, err;
+      try { startP = this.grammar.getSymbol(this.startSymbol); } catch (x) { /* getSymbol reads symbolMap_[name].parser; undefined rule throws */ }
+      if ( ! startP ) throw new Error('no rule named ' + this.startSymbol + ' in the grammar');
       events.push({ type: 'try', p: startP, start: 0, end: null, root: true });
       try { result = startP.parse(this.StringPStream.create({ apply: apply, str: this.input }), this.grammar); }
       catch (x) { err = this.explain(x, events); }

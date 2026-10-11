@@ -548,7 +548,9 @@ foam.CLASS({
 
     function record(opt_step) {
       if ( ! this.grammar ) { this.status = this.LOAD_FIRST; return; }
-      this.trace = this.ParseTrace.create({ grammar: this.grammar, startSymbol: this.startSymbol, input: this.input }).record();
+      if ( ! this.grammar.symbols.length ) { this.status = this.NO_SYMBOLS; return; }
+      try { this.trace = this.ParseTrace.create({ grammar: this.grammar, startSymbol: this.startSymbol, input: this.input }).record(); }
+      catch (x) { this.trace = null; this.status = 'could not parse: ' + ( x.message || x ); return; }
       this.show(opt_step === undefined ? this.trace.length() : opt_step);   // the camera stays where the user put it; follow-pan takes over while stepping
     },
 
