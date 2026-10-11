@@ -6,8 +6,7 @@ foam.CLASS({
   javaImports: [
     'com.foamdev.grammaticvisualizer.*',
     'foam.dao.DAO',
-    'foam.lang.X',
-    'foam.util.SafetyUtil'
+    'foam.lang.X'
   ],
 
   methods: [
@@ -15,9 +14,10 @@ foam.CLASS({
       name: 'runTest',
       javaCode: `
         var sentence = new Sentence();
-        test ( SafetyUtil.isEmpty(sentence.getId()), "ID empty before create");
+        sentence.setName("test sentence");
+        test ( sentence.getId() == 0, "ID unset before create");
         sentence = (Sentence) ((DAO) x.get("sentenceDAO")).put(sentence);
-        test ( ! SafetyUtil.isEmpty(sentence.getId()), "ID set after create");
+        test ( sentence.getId() != 0, "ID assigned by sentenceDAO (seqNo) after create");
       `
     }
   ]
