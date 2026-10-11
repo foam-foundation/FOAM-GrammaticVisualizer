@@ -25,3 +25,16 @@ p({
     "view":{"class":"foam.core.reflow.Console"}
   }
 })
+
+// Railroad grammar viewer (src/foam/parse/rail) as an app screen
+p({
+  "class":"foam.core.menu.Menu",
+  "id":"grammaticVisualizer.grammar",
+  "label":"Grammar Visualizer",
+  "authenticate":true,
+  "keywords":["grammar","railroad","parser","visualizer"],
+  "handler":{
+    "class":"foam.core.menu.ViewMenu",
+    "view":{"class":"com.foamdev.grammaticvisualizer.GrammarVisualizerView"}
+  }
+})

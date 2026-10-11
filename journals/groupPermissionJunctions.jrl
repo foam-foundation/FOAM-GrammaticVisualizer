@@ -63,3 +63,6 @@ p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer"
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.spThemeDAO"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.themeDAO"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"theme.read.*"})
+
+// Grammar Visualizer screen
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.grammar"})

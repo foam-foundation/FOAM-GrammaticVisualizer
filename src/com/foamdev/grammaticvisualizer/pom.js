@@ -4,6 +4,7 @@ foam.POM({
     { name: 'test/pom',                 flags: 'test' }
   ],
   files: [
-    { name: 'Sentence',                  flags: 'js|java' }
+    { name: 'Sentence',                  flags: 'js|java' },
+    { name: 'GrammarVisualizerView',     flags: 'web' }
   ]
 });
