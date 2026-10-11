@@ -38,3 +38,28 @@ p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer"
 // DAOs queryable from Reflow (AuthenticatedCSpecDAO lists services the user can read)
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.AuthenticatedCSpecDAO"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.read.sentenceDAO"})
+
+// Admin sub-menu container (needed so its children can be reached from the nav)
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin"})
+
+// Knowledge Base + all Flows (both browse flowDAO; service.flowDAO granted above)
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.knowledgeBase"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.flows"})
+
+// All Views (demo page, no DAO)
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin.all-views"})
+
+// Countries (countryDAO is globally readable)
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin.countries"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.countryDAO"})
+
+// Menus tree
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin.menus"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.menuDAO"})
+
+// Themes: Customise Theme (spThemeDAO) and Themes - All (themeDAO)
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin.customise-theme"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin.theme-all"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.spThemeDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.themeDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"theme.read.*"})
