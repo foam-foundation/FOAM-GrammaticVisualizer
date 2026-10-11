@@ -12,6 +12,7 @@ p({
       .setSeqNo(true)
       .setAuthorize(false)
       .setJournalType(foam.dao.JournalType.SINGLE_JOURNAL)
+      .setJournalName("sentences")
       .build();
   """,
   "client": `{"of":"com.foamdev.grammaticvisualizer.Sentence"}`
