@@ -23,24 +23,24 @@ foam.CLASS({
     ^sub { color: $foam.parse.rail.RailTheme.inkMuted; font-size: 11px; padding: 0 8px 8px; }
     ^row { display: grid; grid-template-columns: auto 16px minmax(0, 1fr) 62px auto; align-items: baseline;
            gap: 0 6px; padding: 2px 8px 2px 6px; cursor: pointer; border-left: 3px solid transparent; }
-    ^row:hover { background: #f1f5fb; }
+    ^row:hover { background: $foam.parse.rail.RailTheme.rowHover; }
     ^row:hover ^locate { visibility: visible; }
-    ^selected { background: #e6eefc; border-left-color: $foam.parse.rail.RailTheme.matched; }
-    ^guides { height: 1.4em; background: repeating-linear-gradient(to right, #d8d8d8 0 1px, transparent 1px 14px); }
+    ^selected { background: $foam.parse.rail.RailTheme.rowSelected; border-left-color: $foam.parse.rail.RailTheme.matched; }
+    ^guides { height: 1.4em; background: repeating-linear-gradient(to right, $foam.parse.rail.RailTheme.guide 0 1px, transparent 1px 14px); }
     ^glyph { text-align: center; }
     ^rule { font-weight: $font-medium; }
     ^rule, ^leaf { justify-self: start; }
-    ^leaf { font-family: monospace; color: $foam.parse.rail.RailTheme.ink; background: #fff7d6; border: 1px solid $foam.parse.rail.RailTheme.terminalBorder; border-radius: 9px; padding: 0 7px; line-height: 1.4; }
+    ^leaf { font-family: monospace; color: $foam.parse.rail.RailTheme.ink; background: $foam.parse.rail.RailTheme.leafBg; border: 1px solid $foam.parse.rail.RailTheme.terminalBorder; border-radius: 9px; padding: 0 7px; line-height: 1.4; }
     ^pending ^leaf { border-color: $foam.parse.rail.RailTheme.trying; }
     ^span { font-size: 11px; font-family: monospace; color: $foam.parse.rail.RailTheme.inkMuted; text-align: right; white-space: nowrap; }
-    ^text { display: inline-block; vertical-align: bottom; font-size: 11px; font-family: monospace; color: $foam.parse.rail.RailTheme.inkSecondary; background: #f1f1f1; border-radius: 3px; padding: 0 4px; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+    ^text { display: inline-block; vertical-align: bottom; font-size: 11px; font-family: monospace; color: $foam.parse.rail.RailTheme.inkSecondary; background: $foam.parse.rail.RailTheme.textChipBg; border-radius: 3px; padding: 0 4px; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
     ^count { font-size: 10px; color: $foam.parse.rail.RailTheme.inkMuted; margin-left: 4px; }
     ^locate { visibility: hidden; color: $foam.parse.rail.RailTheme.matched; font-size: 11px; margin-left: 6px; }
     ^pending { color: $foam.parse.rail.RailTheme.trying; }
     ^pending ^rule { color: $foam.parse.rail.RailTheme.tryingText; }
     ^matched ^glyph { color: $foam.parse.rail.RailTheme.matched; }
     ^empty { color: $foam.parse.rail.RailTheme.inkMuted; padding: 4px 8px; }
-    ^filter { background: #fff7e0; border-bottom: 1px solid $foam.parse.rail.RailTheme.filterBorder; padding: 4px 8px; margin-bottom: 4px; }
+    ^filter { background: $foam.parse.rail.RailTheme.filterBg; border-bottom: 1px solid $foam.parse.rail.RailTheme.filterBorder; padding: 4px 8px; margin-bottom: 4px; }
     ^clear { color: $foam.parse.rail.RailTheme.matched; cursor: pointer; margin-left: 8px; text-decoration: underline; }
   `,
 

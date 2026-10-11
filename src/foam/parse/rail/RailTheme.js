@@ -70,7 +70,24 @@ foam.CLASS({
     { name: 'tryingText',     value: '#B87A00' },  // TRYING as text: darker, readable on white
     { name: 'failed',         value: '#D55E00' },  // Outcome FAILED
     { name: 'terminalBorder', value: '#d9c98d' },  // edge of a terminal chip (fill is colors.terminalBg)
-    { name: 'filterBorder',   value: '#f0d890' }   // edge of the derivation filter bar
+    { name: 'filterBorder',   value: '#f0d890' },  // edge of the derivation filter bar
+    // Surfaces. The viewer is a light design whatever the host app's theme is, so the
+    // page colours are tokens of its own rather than the app's $backgroundDefault.
+    { name: 'page',           value: '#fff' },     // viewer background
+    { name: 'pageVeil',       value: 'rgba(255,255,255,0.96)' },  // legend panel over the canvas
+    { name: 'statusBg',       value: '#fafafa' },  // status line
+    { name: 'splitter',       value: '#eee' },     // column splitter
+    { name: 'highlightSoft',  value: '#d6e8f5' },  // splitter hover; consumed input in the document view
+    { name: 'highlightHot',   value: '#cfe0f5' },  // the document span the current step is on
+    { name: 'rowHover',       value: '#f1f5fb' },  // derivation row under the pointer
+    { name: 'rowSelected',    value: '#e6eefc' },  // derivation row that was clicked
+    { name: 'guide',          value: '#d8d8d8' },  // depth guide lines in the derivation
+    { name: 'leafBg',         value: '#fff7d6' },  // terminal chip in the derivation (matches colors.terminalBg)
+    { name: 'textChipBg',     value: '#f1f1f1' },  // matched-text chip in the derivation
+    { name: 'filterBg',       value: '#fff7e0' },  // derivation filter bar
+    { name: 'openBg',         value: '#fff1cc' },  // document span of a rule still being tried
+    { name: 'diedBg',         value: '#f8d9c4' },  // document span where the parse failed
+    { name: 'tooltipBg',      value: 'rgba(34, 34, 34, 0.92)' }
   ],
 
   properties: [
