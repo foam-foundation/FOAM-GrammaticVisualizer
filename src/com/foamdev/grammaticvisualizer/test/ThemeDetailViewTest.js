@@ -44,7 +44,7 @@ foam.CLASS({
       v.write();
       var root = v.element_;
       var tabEls = function() { return Array.from(root.querySelectorAll('.foam-u2-SegmentedTabs-tabRow > *')); };
-      await until(function() { return tabEls().length >= 9; });
+      await until(function() { return tabEls().length >= 10; });
       var tabLabels = tabEls().map(function(e) { return e.textContent.trim(); });
       var select = async function(label, readyFn) {
         var tab = tabEls().find(function(e) { return e.textContent.trim() === label; });
@@ -52,10 +52,10 @@ foam.CLASS({
         await until(readyFn);
       };
       x.test(!! root.querySelector('.foam-u2-SegmentedTabs'), 'sections render as segmented tabs');
-      x.test(tabLabels.indexOf('Colours') >= 0 && tabLabels.indexOf('Icons / Images') >= 0 && tabLabels.indexOf('Inputs') >= 0, 'one tab per Theme section: ' + tabLabels.join(', '));
+      x.test(tabLabels.indexOf('Legacy CSS') >= 0 && tabLabels.indexOf('CSS tokens') === tabLabels.indexOf('Legacy CSS') + 1 && tabLabels.indexOf('Icons / Images') >= 0 && tabLabels.indexOf('Inputs') >= 0, 'one tab per Theme section: ' + tabLabels.join(', '));
 
       // Colours: a card per colour field, the swatch carries the value, unset ones say so.
-      await select('Colours', function() { return root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeColoursView-card').length > 0 && root.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row').length > 0; });
+      await select('Legacy CSS', function() { return root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeColoursView-card').length > 0; });
       var cards = root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeColoursView-card');
       x.test(cards.length >= 30, 'a swatch card per colour field: ' + cards.length);
       var p1 = Array.from(cards).find(function(c) { return /primary1\b/i.test(c.textContent) || /Primary 1/.test(c.textContent); });
@@ -68,10 +68,13 @@ foam.CLASS({
       await wait(50);
       x.test(root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeColoursView-unset').length === cards.length - 2, 'a swatch follows its field');
 
-      // Token overrides: this theme's rows only; add through the form; remove through the row action.
-      var tov = root.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView');
-      x.test(!! tov, 'the Colours tab hosts the token override table');
-      var rows = function() { return tov.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row'); };
+      // CSS tokens tab. Overrides: this theme's rows only; add through the form; remove through the row action.
+      await select('CSS tokens', function() { return root.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row').length > 0; });
+      // Re-query on every use: TabbedDetailView renders the tab content again once section visibility settles,
+      // and an element captured before that is a detached copy whose listeners are gone.
+      var tov = function() { return root.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView'); };
+      x.test(root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView').length === 1, 'one override table in the DOM');
+      var rows = function() { return tov().querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row'); };
       x.test(rows().length === 1 && /\$primary500/.test(rows()[0].textContent) && /#123456/.test(rows()[0].textContent) && /#abcdef/.test(rows()[0].textContent),
         'lists the theme\'s overrides with light and dark values: ' + (rows()[0] && rows()[0].textContent));
       // reach the view object through the DAO: put a row and the table follows.
@@ -83,13 +86,13 @@ foam.CLASS({
       removeBtn.click();
       await until(function() { return rows().length === 1; });
       x.test(rows().length === 1, 'the row action removes the override: ' + rows().length);
-      var addBtn = Array.from(tov.querySelectorAll('.foam-u2-ActionView')).find(function(b) { return /Add override/.test(b.textContent); });
-      x.test(!! addBtn && addBtn.disabled, 'Add override is disabled until a token and a value are given');
+      var addBtn = function() { return Array.from(tov().querySelectorAll('.foam-u2-ActionView')).find(function(b) { return /Add override/.test(b.textContent); }); };
+      x.test(!! addBtn() && addBtn().disabled, 'Add override is disabled until a token and a value are given');
 
       // Token catalogue: every base token with a light and a dark value; search filters; a click prefills the form.
-      var cat = root.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView');
-      x.test(!! cat, 'the Colours tab hosts the token catalogue');
-      var catRows = function() { return cat.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-row'); };
+      var cat = function() { return root.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView'); };
+      x.test(!! cat(), 'the CSS tokens tab hosts the catalogue');
+      var catRows = function() { return cat().querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-row'); };
       x.test(catRows().length >= 200, 'lists the base tokens: ' + catRows().length);
       var p500 = Array.from(catRows()).find(function(r) { return r.querySelector('td').textContent === '$primary500'; });
       x.test(!! p500, 'primary500 is listed');
@@ -101,16 +104,16 @@ foam.CLASS({
       x.test(p500.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-swatch').length === 2, 'colour tokens get a swatch per mode');
       var ih = Array.from(catRows()).find(function(r) { return r.querySelector('td').textContent === '$inputHeight'; });
       x.test(ih && ih.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-swatch').length === 0 && /34px/.test(ih.textContent), 'a size token shows its value without a swatch');
-      var filterEl = cat.querySelector('input');
+      var filterEl = cat().querySelector('input');
       filterEl.value = 'borderBrand';
       filterEl.dispatchEvent(new Event('input', { bubbles: true }));
       await wait(100);
       x.test(catRows().length === 4 && Array.from(catRows()).every(function(r) { return /borderBrand/.test(r.textContent); }), 'search filters the catalogue: ' + catRows().length);
       catRows()[0].click();
       await wait(50);
-      var srcEl = tov.querySelector('input[name=source]');
+      var srcEl = tov().querySelector('input[name=source]');
       x.test(srcEl && /^borderBrand/.test(srcEl.value), 'clicking a row prefills the override form: ' + (srcEl && srcEl.value));
-      x.test(addBtn && ! addBtn.disabled, 'the form is ready to add after a pick');
+      x.test(addBtn() && ! addBtn().disabled, 'the form is ready to add after a pick');
 
       // Icons / Images: the 1200x900 logo stays inside its preview box, on a light and a dark surface.
       await select('Icons / Images', function() { return root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeImagesView-box img, .com-foamdev-grammaticvisualizer-theme-ThemeImagesView-box svg').length > 0; });

@@ -56,7 +56,9 @@ foam.CLASS({
   css: `
     << { display: flex; flex-direction: column; gap: $space-2; }
     <<help { color: $textSecondary; }
-    <<table { width: 100%; border-collapse: collapse; }
+    <<table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    <<table th:first-child { width: 40%; }
+    <<table th:last-child { width: 4rem; }
     <<table th { text-align: left; padding: $space-1 $space-2; border-bottom: 1px solid $borderDefault; }
     <<table td { padding: $space-1 $space-2; border-bottom: 1px solid $borderLight; vertical-align: middle; }
     <<token { font-family: monospace; }
