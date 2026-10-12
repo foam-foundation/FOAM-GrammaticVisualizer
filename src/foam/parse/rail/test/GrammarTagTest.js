@@ -29,6 +29,12 @@ foam.CLASS({
       x.test(!! tagEl, 'markdown renders the tag');
       x.test(tagEl && tagEl.querySelector('textarea').value === G, 'the body is the grammar text');
       md.remove();
+      var md2 = this.MarkdownView.create({ data: '<grammar inputs="abc|xyz">\n' + G + '\n</grammar>\n' }, x);
+      md2.write();
+      await wait(80);
+      var ex2 = md2.element_.querySelector('.foam-parse-rail-GrammarTag-examples');
+      x.test(ex2 && ex2.getClientRects().length > 0 && ex2.querySelectorAll('tr.row').length === 2, 'inputs from markdown open the Examples tab with a row per input');
+      md2.remove();
 
       // Direct: Code tab by default, Diagram tab mounts the viewer with the compiled grammar and the input.
       var t = this.GrammarTag.create({ grammarText: G, input: 'abc' }, x);
@@ -53,6 +59,19 @@ foam.CLASS({
       t.compile();
       x.test(/grammar error/.test(t.error), 'a bad grammar shows an error: ' + t.error);
       t.remove();
+
+      // inputs: an Examples tab, one row per input; a row click opens the diagram on that input.
+      var ex = this.GrammarTag.create({ grammarText: G, inputs: 'abc|123' }, x);
+      ex.write(); await wait(50);
+      x.test(ex.mode === 'examples', 'with inputs the Examples tab comes first');
+      var rows = ex.element_.querySelectorAll('.foam-parse-rail-GrammarTag-examples tr.row');
+      x.test(rows.length === 2, 'one row per input: ' + rows.length);
+      var cells = r => Array.from(r.querySelectorAll('td')).map(td => td.textContent);
+      x.test(cells(rows[0])[1] === 'abc' && cells(rows[0])[2] === '[["a","b","c"],""]', 'abc parses, value shown as JSON: ' + cells(rows[0]).join(' | '));
+      x.test(cells(rows[1])[2] === 'undefined' && rows[1].querySelector('.fail'), '123 fails, in red: ' + cells(rows[1]).join(' | '));
+      rows[1].click(); await wait(80);
+      x.test(ex.mode === 'diagram' && ex.viewer && ex.viewer.input === '123' && /✗/.test(ex.viewer.status), 'row click shows that input in the diagram, parsed: ' + (ex.viewer && ex.viewer.status.split('\n')[0]));
+      ex.remove();
 
       // input-from: the text comes from a block of the surrounding flow.
       var scoped = x.createSubContext({ scope: { sample: 'xyz', blk: { value: 'qq' } } });

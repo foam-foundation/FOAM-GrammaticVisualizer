@@ -115,6 +115,18 @@ foam.CLASS({
       x.test(/✓/.test(v.status), 'the typed grammar parses the input: ' + v.status.split('\n')[0]);
 
       v.remove();
+
+      // Compact (embedded by the <grammar> tag): no title, hint, sources row or More; transport and panels stay.
+      var c = this.RailDiagramView.create({ compact: true }, x);
+      c.write();
+      c.useGrammar(c.compileGrammar("{ START: literal('x') }"));
+      var ce = c.element_;
+      x.test(! ce.querySelector('select') && ! ce.querySelector('.foam-parse-rail-RailDiagramView-gram'), 'compact: no grammar sources');
+      x.test(! Array.from(ce.querySelectorAll('button')).some(function(b) { return /More/.test(b.textContent); }), 'compact: no More row');
+      x.test(!! ce.querySelector('.foam-parse-rail-RailDiagramView-transport') && !! ce.querySelector('input[type=range]'), 'compact: transport and slider stay');
+      c.parse(); c.runToEnd();
+      x.test(/✓|✗/.test(c.status), 'compact: still parses: ' + c.status.split('\n')[0]);
+      c.remove();
     }
   ]
 });
