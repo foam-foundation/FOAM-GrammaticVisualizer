@@ -47,7 +47,7 @@ foam.CLASS({
   messages: [
     { name: 'TITLE',     message: 'Derivation' },
     { name: 'SUBTITLE',  message: 'what actually matched, dead ends pruned · click a row to locate it on the canvas' },
-    { name: 'EMPTY',     message: 'press Start' },
+    { name: 'EMPTY',     message: 'press Parse to record the derivation' },
     { name: 'LOCATE',    message: '⌖ locate' },
     { name: 'BACK',      message: 'back to tree' },
     { name: 'RECURSING', message: '(recursing)' }

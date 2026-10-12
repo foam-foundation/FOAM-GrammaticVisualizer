@@ -102,7 +102,7 @@ foam.CLASS({
     // Diagram (SVG strips, read through colors below)
     { name: 'track',          value: '#555',    variantKey: 'color', variants: { dark: { value: '#b0b0b0' } } },          // rails between boxes
     { name: 'text',           value: '#222',    variantKey: 'color', variants: { dark: { value: '$textDefault' } } },     // box labels, rule names, values
-    { name: 'muted',          value: '#777',    variantKey: 'color', variants: { dark: { value: '#9a9a9a' } } },          // badges, counters, frames, priority discs
+    { name: 'muted',          value: '#666',    variantKey: 'color', variants: { dark: { value: '#a8a8a8' } } },          // badges, counters, frames, priority discs
     { name: 'terminalBg',     value: '#fff7d6', variantKey: 'color', variants: { dark: { value: '#4a4020' } } },          // terminal box fill
     { name: 'ruleRefBg',      value: '#e8f0ff', variantKey: 'color', variants: { dark: { value: '#243447' } } },          // rule reference box fill
     { name: 'frameBg',        value: 'rgba(232,240,255,0.35)', variantKey: 'color', variants: { dark: { value: 'rgba(36,52,71,0.45)' } } },  // unfolded rule frame
@@ -138,14 +138,14 @@ foam.CLASS({
       name: 'fonts',
       factory: function() {
         return {
-          label:    '13px sans-serif',        // box labels
-          badge:    'bold 9px sans-serif',    // ×1+, aA, run counters
-          glyph:    'bold 11px sans-serif',   // ✓ ▶ ✗
-          ruleName: 'bold 13px monospace',    // strip label column
+          label:    '14px sans-serif',        // box labels
+          badge:    'bold 10px sans-serif',   // ×1+, aA, run counters
+          glyph:    'bold 12px sans-serif',   // ✓ ▶ ✗
+          ruleName: 'bold 14px monospace',    // strip label column
           priority: 'bold 10px sans-serif',   // branch numbers
           tooltip:  '12px monospace',
           ribbon:   '15px monospace',
-          value:    '9px monospace'          // value tags under boxes, value lanes under strips
+          value:    '10px monospace'         // value tags under boxes, value lanes under strips
         };
       }
     },

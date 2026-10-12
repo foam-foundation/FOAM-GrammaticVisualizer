@@ -55,6 +55,7 @@ foam.CLASS({
     ^tip[hidden] { display: none; }
     /* Element groups: hit targets take the pointer; composites and decorations let it through to the strip behind. */
     ^ [data-rail] { cursor: pointer; }
+    ^ [data-rail]:hover > .box.ruleref { stroke-width: 2.5; }
     ^ text { dominant-baseline: central; pointer-events: none; }
     ^ .emphasis-text { dominant-baseline: auto; }
     ^ path, ^ rect, ^ circle { pointer-events: visible; }
