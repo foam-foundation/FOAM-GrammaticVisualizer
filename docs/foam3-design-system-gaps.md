@@ -23,6 +23,7 @@ design system · 🟡 paper cut — cost time, not design.
 | 10 | App input CSS swallows `type=range` | 🟠 | `RangeView` opts out of `TextInputCSS` |
 | 11 | Standalone page can't get base typography from the core pom | 🟡 | `foam.u2.BaseStyles` in the u2 pom |
 | 12 | Dark mode reaches a page with no theme (observation) | ✅ | Docs |
+| 13 | No overflow / "More" container that can hold property views | 🟡 | `OverlayActionListView` accepting any view |
 
 ---
 
@@ -107,3 +108,10 @@ design system · 🟡 paper cut — cost time, not design.
 
 **Observed** · the demo page has no app theme, yet once `Fonts` loaded it followed the OS dark setting and the viewer flipped with it: the root context carries a default `Theme`, and `foam.lang.Window` drives `activeVariants.color` from `prefers-color-scheme`.
 **Fix** · a line in the CSSTokens guide: every page gets dark mode; opt out with `useVariants: false`.
+
+## 13. No overflow / "More" container that can hold property views 🟡
+
+**Needed** · fold rarely used toolbar controls (checkboxes + actions) behind one `More ▾`.
+**foam3** · `foam.u2.view.OverlayActionListView` (what `ButtonGroup` overflows into) takes actions only; `ExpandableBorder` has no header toggle and caps content at 500px.
+**Did** · a `toggleMore` text action and a second toolbar row under `show(moreShown$)`.
+**Fix** · an overlay list that accepts any view spec, or an `ExpandableBorder` with a built-in header toggle.
