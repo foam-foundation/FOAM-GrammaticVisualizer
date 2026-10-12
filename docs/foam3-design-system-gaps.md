@@ -32,6 +32,7 @@ design system · 🟡 paper cut — cost time, not design.
 | 19 | No screen for `CSSTokenOverride`, the real per-theme theming | 🟠 | A token override editor on the Theme screen |
 | 20 | `ImageView` renders a picture at natural size | 🟡 | A bounded preview view for `Image` properties |
 | 21 | Theme fields explain nothing: no `help`, no units, raw class names | 🟡 | `help` on every Theme property |
+| 22 | `TabbedDetailView` renders every tab twice; async views in the first tree crash | 🟠 | Apply section visibility synchronously on first render |
 
 ---
 
@@ -179,3 +180,11 @@ design system · 🟡 paper cut — cost time, not design.
 **foam3** · the properties have `documentation` (shown nowhere in the UI) and no `help`; `PropertyBorder` renders `help` as a ? icon with an expandable text (`PropertyBorder.js:375-414`). `sideNav` is a JSON view spec in a plain string field; `topNavigation` and `footerView` are class ids with no default shown.
 **Did** · `ThemeDetailView` passes `help` per field through `SectionView.config`; `InputSizingView` adds a live sample box.
 **Fix** · `help` on the Theme properties in foam3; a view-spec editor for `sideNav`.
+
+
+## 22. `TabbedDetailView` renders every tab twice; async views in the first tree crash 🟠
+
+**Needed** · open a Theme, press Edit.
+**foam3** · `TabbedDetailView.updateVis` is `isMerged` with a 100ms delay (`TabbedDetailView.js:125-132`), so the first render runs with `stableVisibilities_ = []`, which the template treats as "every section". The real list arrives 100ms later and the whole tab tree is rebuilt. Views in the first tree that render asynchronously are still awaiting: `FObjectView` (the default for `appConfig`, an `FObjectProperty`) awaits `choicesLoaded`, resumes on a detached element, and `end()` returns `undefined`, so `.start()` throws (`FObjectView.js:290`). Every open also logs forty "Attempt to add child to detached parent" warnings. Stock foam3's Admin → Themes - All shows both.
+**Did** · `ThemeDetailView` redeclares `updateVis` without the merge; Theme's sections resolve synchronously, so the first render is the only one.
+**Fix** · apply the visibility list synchronously on first render and keep the merge for later changes; or have `addChild_` on a detached parent stop the async render instead of warning.
