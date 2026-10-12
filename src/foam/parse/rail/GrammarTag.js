@@ -85,7 +85,8 @@ foam.CLASS({
       documentation: "'code' or 'diagram'; the tab strip binds to it."
     },
     { class: 'String', name: 'error' },
-    { name: 'viewer', documentation: 'The RailDiagramView, created the first time the Diagram tab opens.' }
+    { name: 'viewer', documentation: 'The RailDiagramView, created the first time the Diagram tab opens and kept.' },
+    { name: 'diagramEl', documentation: 'The box the viewer lives in; shown on the Diagram tab.' }
   ],
 
   methods: [
@@ -104,15 +105,12 @@ foam.CLASS({
           .start(this.GRAMMAR_TEXT, { data$: this.grammarText$ }).attrs({ spellcheck: false }).end()
         .end()
         .start('div').addClass(this.myClass('error')).addClass('p-sm').show(this.error$.map(function(e) { return !! e; })).add(this.error$).end()
-        .start('div').addClass(this.myClass('diagram')).show(this.mode$.map(function(m) { return m === 'diagram'; }))
-          .add(this.dynamic(function(mode) {
-            if ( mode !== 'diagram' ) return;
-            if ( ! self.viewer ) self.viewer = self.RailDiagramView.create(null, self);
-            this.add(self.viewer);
-            self.compile();
-          }))
-        .end();
+        // The viewer is created on the first Diagram open and then stays mounted: a detached
+        // u2 element cannot take children again, and keeping it keeps the trace across tab switches.
+        .start('div', null, this.diagramEl$).addClass(this.myClass('diagram')).show(this.mode$.map(function(m) { return m === 'diagram'; })).end();
+      this.onDetach(this.mode$.sub(this.onMode));
       this.onDetach(this.grammarText$.sub(this.recompile));
+      this.onMode();
     },
 
     function add() {
@@ -148,6 +146,15 @@ foam.CLASS({
   ],
 
   listeners: [
+    function onMode() {
+      if ( this.mode !== 'diagram' ) return;
+      if ( ! this.viewer ) {
+        this.viewer = this.RailDiagramView.create(null, this);
+        this.diagramEl.add(this.viewer);
+      }
+      this.compile();
+    },
+
     {
       name: 'recompile',
       isMerged: true,
