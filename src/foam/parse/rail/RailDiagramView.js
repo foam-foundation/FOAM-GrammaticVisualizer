@@ -158,8 +158,9 @@ foam.CLASS({
     ^row { display: flex; gap: $space-1_5; align-items: center; flex-wrap: wrap; }
     ^row > * { min-width: 0; flex: 1; }
     ^row > .foam-u2-ActionView { flex: none; }
-    ^gram textarea { width: 100%; box-sizing: border-box; font-family: monospace; margin: $space-1_5 0 $space-1; }
-    ^input textarea { width: 100%; box-sizing: border-box; font-family: monospace; resize: vertical; }
+    /* field-sizing: the textareas grow with their text where supported (Chromium); rows stays the floor elsewhere. */
+    ^gram textarea { width: 100%; box-sizing: border-box; font-family: monospace; margin: $space-1_5 0 $space-1; field-sizing: content; max-height: 30rem; overflow: auto; }
+    ^input textarea { width: 100%; box-sizing: border-box; font-family: monospace; resize: vertical; field-sizing: content; max-height: 12rem; overflow: auto; }
     ^transport { display: flex; gap: $space-1; margin: $space-1_5 0 $space-1; }
     ^transport > * { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* The app's text-input CSS sizes every <input>; a range needs the native control back. */
