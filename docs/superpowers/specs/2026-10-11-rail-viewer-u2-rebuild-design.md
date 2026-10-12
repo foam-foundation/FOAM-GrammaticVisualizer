@@ -60,3 +60,34 @@ transport bar and the legend are candidates).
 `docs/foam3-design-system-gaps.md`. One entry per gap: what the viewer needed,
 what foam3 offers, workaround used, severity. Written in the commit that hits
 the gap.
+
+## Status (2026-10-12)
+
+Done on `setup/initial-project`:
+
+- `RailDiagramView` chrome: 12 actions, 11 property-bound controls, no raw
+  `<button>/<input>/<select>/<textarea>` and no inline colour (asserted by
+  `RailDiagramViewTest`). Layout CSS on `$space-*`, `rem`, Fonts classes.
+- `DerivationPanel` and `DocumentView`: depth palette and legend samples as
+  classes on `RailTheme` tokens; sizes on `rem`/`$space-*`/`$header-*`.
+- Demo page mounts `Fonts` so the standalone page matches the app's type scale;
+  it also follows the OS dark setting through foam3's default theme.
+- Rail suite 374 passed / 1 known (`Span`); `CSSAuditTest` 0 failures.
+- 12 entries in `docs/foam3-design-system-gaps.md`.
+
+Deviations from the mapping above:
+
+- Legend stays a `show()`-toggled panel, not an `ExpandableBorder`: the border
+  has no header toggle and would leave an empty bordered box when collapsed.
+- Splitter stays hand-rolled (gap 4).
+- `ButtonGroup` not used for the transport: its overflow menu would hide the
+  step buttons in the 440px column; a wrapping flex row keeps them visible.
+
+Open:
+
+- Loading the app directly at `#grammaticVisualizer.grammar` on a fresh page
+  shows the nav only; clicking the menu renders it. Not reproduced for Reflow in
+  a clean run; to check against another `ViewMenu` before calling it a gap.
+- In one app session a synthetic `input` event on the slider did not move the
+  step while property→slider did; the same event works on the demo page. Not
+  reproduced with a real pointer; to re-check by hand.
