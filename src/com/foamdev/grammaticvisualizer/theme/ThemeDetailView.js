@@ -35,6 +35,13 @@ foam.CLASS({
     << .foam-u2-SegmentedTabs-content > div {
       padding: $space-3 $space-4;
     }
+    /* Ten tabs overflow at narrow widths; keep the scrollbar but quiet it: thin, no track, thumb only on hover. */
+    << .foam-u2-SegmentedTabs-tabRow { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+    << .foam-u2-SegmentedTabs-tabRow:hover { scrollbar-color: $borderDefault transparent; }
+    << .foam-u2-SegmentedTabs-tabRow::-webkit-scrollbar { height: 4px; }
+    << .foam-u2-SegmentedTabs-tabRow::-webkit-scrollbar-track { background: transparent; }
+    << .foam-u2-SegmentedTabs-tabRow::-webkit-scrollbar-thumb { background: transparent; border-radius: $radius; }
+    << .foam-u2-SegmentedTabs-tabRow:hover::-webkit-scrollbar-thumb { background: $borderDefault; }
   `,
 
   messages: [
