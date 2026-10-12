@@ -91,14 +91,14 @@ log(!np?'undefined':np.toString());
 
 // Here we'll create an in-lined literal 'def' parser and then call in directly.
 log(P.literal('def').parse(ps).toString());</example>
-Every parser below comes as a block with three tabs: **Examples** runs it over sample inputs (click a row to see that parse in the diagram), **Code** is the grammar as a `symbols()` body you can edit, and **Diagram** draws it as a railroad and steps through the parse.
+Every parser below comes as a block with two tabs: **Grammar** shows it as a `symbols()` body you can edit, with a table of sample inputs and what it makes of each; **Diagram** draws it as a railroad and steps through the parse of any of those inputs (pick one, or click its row).
 
 <grammar inputs="abc|abcdef|xyz" input="abcdef">
 { START: literal('abc') }
 </grammar>
 
 ## Parser Tester
-The blocks above and below show their examples in an **Examples** tab. The remaining `<example>` snippets, which show the JavaScript API itself, use a small helper instead:
+The blocks above and below show their examples in a table under the grammar. The remaining `<example>` snippets, which show the JavaScript API itself, use a small helper instead:
 Before continuing, let's write a helper function testP() to make demonstrating parser examples easier.
 
 The testP() function uses the U2 GUI library to create a table of input output pairs.

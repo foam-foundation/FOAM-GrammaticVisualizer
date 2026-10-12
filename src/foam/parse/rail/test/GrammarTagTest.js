@@ -33,13 +33,13 @@ foam.CLASS({
       md2.write();
       await wait(80);
       var ex2 = md2.element_.querySelector('.foam-parse-rail-GrammarTag-examples');
-      x.test(ex2 && ex2.getClientRects().length > 0 && ex2.querySelectorAll('tr.row').length === 2, 'inputs from markdown open the Examples tab with a row per input');
+      x.test(ex2 && ex2.getClientRects().length > 0 && ex2.querySelectorAll('tr.row').length === 2, 'inputs from markdown show the examples table with a row per input');
       md2.remove();
 
       // Direct: Code tab by default, Diagram tab mounts the viewer with the compiled grammar and the input.
       var t = this.GrammarTag.create({ grammarText: G, input: 'abc' }, x);
       t.write();
-      x.test(t.mode === 'code' && ! t.element_.querySelector('.foam-parse-rail-RailDiagramView'), 'starts on the Code tab, no viewer yet');
+      x.test(t.mode === 'grammar' && ! t.element_.querySelector('.foam-parse-rail-RailDiagramView'), 'starts on the Grammar tab, no viewer yet');
       t.mode = 'diagram';
       await wait(50);
       var strips = t.viewer && t.viewer.scene.strips.map(function(s) { return s.name; });
@@ -51,8 +51,8 @@ foam.CLASS({
 
       // Tab switches keep the viewer and its trace; the second Diagram open must not rebuild it.
       var viewer = t.viewer, step = t.viewer.step;
-      t.mode = 'code'; await wait(20); t.mode = 'diagram'; await wait(50);
-      x.test(t.viewer === viewer && t.viewer.step === step && !! t.element_.querySelector('.foam-parse-rail-RailDiagramView'), 'Code → Diagram again keeps the same viewer at the same step');
+      t.mode = 'grammar'; await wait(20); t.mode = 'diagram'; await wait(50);
+      x.test(t.viewer === viewer && t.viewer.step === step && !! t.element_.querySelector('.foam-parse-rail-RailDiagramView'), 'Grammar → Diagram again keeps the same viewer at the same step');
 
       // A broken grammar reports instead of throwing.
       t.grammarText = '{ START: nope( }';
@@ -63,7 +63,7 @@ foam.CLASS({
       // inputs: an Examples tab, one row per input; a row click opens the diagram on that input.
       var ex = this.GrammarTag.create({ grammarText: G, inputs: 'abc|123' }, x);
       ex.write(); await wait(50);
-      x.test(ex.mode === 'examples', 'with inputs the Examples tab comes first');
+      x.test(ex.mode === 'grammar' && ex.element_.querySelectorAll('.foam-parse-rail-GrammarTag-examples tr.row').length === 2, 'the Grammar tab holds the examples table');
       var rows = ex.element_.querySelectorAll('.foam-parse-rail-GrammarTag-examples tr.row');
       x.test(rows.length === 2, 'one row per input: ' + rows.length);
       var cells = r => Array.from(r.querySelectorAll('td')).map(td => td.textContent);
@@ -71,6 +71,11 @@ foam.CLASS({
       x.test(cells(rows[1])[2] === 'undefined' && rows[1].querySelector('.fail'), '123 fails, in red: ' + cells(rows[1]).join(' | '));
       rows[1].click(); await wait(80);
       x.test(ex.mode === 'diagram' && ex.viewer && ex.viewer.input === '123' && /✗/.test(ex.viewer.status), 'row click shows that input in the diagram, parsed: ' + (ex.viewer && ex.viewer.status.split('\n')[0]));
+      x.test(ex.selected === '123', 'the picker follows the row click');
+      ex.selected = 'abc'; await wait(80);
+      x.test(ex.viewer.input === 'abc' && /✓/.test(ex.viewer.status), 'the picker loads another input and parses it: ' + ex.viewer.status.split('\n')[0]);
+      var sel = ex.element_.querySelector('.foam-parse-rail-GrammarTag-pick select');
+      x.test(!! sel && sel.options.length === 3, 'the picker lists the inputs after a placeholder');
       ex.remove();
 
       // input-from: the text comes from a block of the surrounding flow.
