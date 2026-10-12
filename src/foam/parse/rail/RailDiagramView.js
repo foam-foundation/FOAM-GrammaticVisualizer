@@ -520,7 +520,7 @@ foam.CLASS({
       var self = this, found = [];
       var consider = function(id) {
         try {
-          var cls = foam.lookup(id, true);
+          var cls = foam.maybeLookup(id);
           if ( ! cls || ! cls.getAxiomsByClass ) return;
           if ( self.Grammar.isSubClass(cls) && cls !== self.Grammar ) found.push({ label: id, load: function() { return cls.create(); } });
           cls.getAxiomsByClass(self.GrammarAxiom).forEach(function(ax) {
@@ -528,7 +528,10 @@ foam.CLASS({
           });
         } catch (x) { /* a class that refuses to build is not a grammar we can show */ }
       };
-      Object.keys(foam.USED || {}).forEach(consider);
+      Object.keys(foam.USED || {}).forEach(function(id) {
+        // Refinements sit in USED under their own id but register nothing there; skip them.
+        if ( ! foam.USED[id].refines ) consider(id);
+      });
       Object.keys(foam.UNUSED || {}).forEach(function(id) {
         var m = foam.UNUSED[id];
         if ( m && ( m.extends === 'foam.parse.Grammar' || ( m.grammars && m.grammars.length ) ) ) consider(id);
@@ -547,8 +550,8 @@ foam.CLASS({
 
     function loadClassId(id) {
       /** Third path: a class id typed by hand. Grammar subclass, or Class.axiomName for a grammars: axiom. */
-      var parts = id.split('.'), cls = foam.lookup(id, true), ax = null;
-      if ( ! cls && parts.length > 1 ) { cls = foam.lookup(parts.slice(0, -1).join('.'), true); ax = parts[parts.length - 1]; }
+      var parts = id.split('.'), cls = foam.maybeLookup(id), ax = null;
+      if ( ! cls && parts.length > 1 ) { cls = foam.maybeLookup(parts.slice(0, -1).join('.')); ax = parts[parts.length - 1]; }
       if ( ! cls ) { this.status = 'no class ' + id; return; }
       try {
         var obj = cls.create();
