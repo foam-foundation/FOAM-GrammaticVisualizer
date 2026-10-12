@@ -94,10 +94,12 @@ Open:
 
 ## Later (noted 2026-10-12, not scheduled)
 
-- **Several previews, one grammar.** `RailDiagramView` holds one `input`/`trace`/`step`.
-  Doable without touching the engine: a `Session { input, trace, step }` list on the
-  view with a `current`; scene and transport follow `current`; each session owns a
-  `DocumentView`/ribbon. Useful for debugging several examples side by side.
+- ~~**Several previews, one grammar.**~~ Done 2026-10-12 at the tag level:
+  `foam.parse.rail.Session { input, grammar, trace, step, snapshot }` with its own
+  step actions; the `<grammar>` tag keeps one per input, renders a card per session
+  (DocumentView bound to `snapshot$` + ⏮ ◀ ▶ ⏭), and mirrors the selected one into
+  `RailDiagramView`, which still holds a single trace. Moving sessions into the
+  viewer itself (several diagrams, or the app screen with sessions) is still open.
 - **Preview abstraction for non-text sources (xlsx, csv, pdf).** The parser reads a
   string and highlights are character offsets; `DocumentView` assumes lines and
   columns. Needs `Source { text, mapOffset(pos) → location }` and a pluggable
