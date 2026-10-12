@@ -19,10 +19,18 @@ foam.CLASS({
   `,
 
   requires: [
+    // Segmented control instead of the underlined strip; same UnstyledTabs API, so TabbedDetailView's render is untouched.
+    'foam.u2.SegmentedTabs as Tabs',
     'com.foamdev.grammaticvisualizer.theme.InputSizingView',
     'com.foamdev.grammaticvisualizer.theme.ThemeColoursView',
     'com.foamdev.grammaticvisualizer.theme.ThemeImagesView'
   ],
+
+  css: `
+    /* TabbedDetailView pads .foam-u2-Tabs-content; the segmented class names differ, so pad them here. */
+    << .foam-u2-SegmentedTabs { padding: $space-3 $space-4; }
+    << .foam-u2-SegmentedTabs-content > div { padding: $space-2 0; }
+  `,
 
   messages: [
     { name: 'HELP_DEFAULT_MENU', message: 'Menu the user lands on after login. Falls back to the first menu they may read.' },

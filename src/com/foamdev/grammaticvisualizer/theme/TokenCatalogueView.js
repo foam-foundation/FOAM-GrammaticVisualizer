@@ -45,7 +45,8 @@ foam.CLASS({
         [ 'Borders',      /^border/ ],
         [ 'Status',       /^(status|success|warn|destructive)/ ],
         [ 'Hints',        /^hint/ ],
-        [ 'Sizing and shape', /^(input|radius$|shadow$|font1$|colorScheme$|space-)/ ],
+        [ 'Typography',   /^(font-|header-|body-|font1$)/ ],
+        [ 'Sizing and shape', /^(input|radius$|shadow$|colorScheme$|space-)/ ],
         [ 'Palette ramps', /^(blue|yellow|orange|purple|green|red|grey|warmGrey|black|neutral|white$)/ ]
       ]
     }
