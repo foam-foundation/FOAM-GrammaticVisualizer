@@ -43,7 +43,7 @@ foam.CLASS({
       var v = this.ThemeDetailView.create({ data: theme, of: this.Theme }, y);
       v.write();
       var root = v.element_;
-      var tabEls = function() { return Array.from(root.querySelectorAll('.foam-u2-Tabs-tabRow > *')); };
+      var tabEls = function() { return Array.from(root.querySelectorAll('.foam-u2-SegmentedTabs-tabRow > *')); };
       await until(function() { return tabEls().length >= 9; });
       var tabLabels = tabEls().map(function(e) { return e.textContent.trim(); });
       var select = async function(label, readyFn) {
@@ -51,6 +51,7 @@ foam.CLASS({
         tab.click();
         await until(readyFn);
       };
+      x.test(!! root.querySelector('.foam-u2-SegmentedTabs'), 'sections render as segmented tabs');
       x.test(tabLabels.indexOf('Colours') >= 0 && tabLabels.indexOf('Icons / Images') >= 0 && tabLabels.indexOf('Inputs') >= 0, 'one tab per Theme section: ' + tabLabels.join(', '));
 
       // Colours: a card per colour field, the swatch carries the value, unset ones say so.
