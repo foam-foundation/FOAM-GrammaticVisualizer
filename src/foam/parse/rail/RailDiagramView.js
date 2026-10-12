@@ -9,15 +9,6 @@ foam.CLASS({
   name: 'RailDiagramView',
   extends: 'foam.u2.View',
 
-  documentation: `
-    The page: a scene host sized by a ResizeObserver, a toolbar, a legend, and
-    the trace column (input ribbon, document view, derivation panel, controls).
-    Composition and wiring only: the scene owns the elements and the pointer
-    (drag pans, wheel zooms, hover tooltips, clicks come back through onHit),
-    the builder owns the mapping, ParseTrace owns the parse; show(n) hands one
-    snapshot to scene, ribbon, document view, panel and status line.
-  `,
-
   requires: [
     'foam.parse.Grammar',
     'foam.parse.GrammarAxiom',
@@ -35,38 +26,35 @@ foam.CLASS({
 
   imports: [ 'theme? as hostTheme' ],
 
-  css: `
-    ^ { font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; overflow: hidden; background: $foam.parse.rail.RailTheme.page; color: $foam.parse.rail.RailTheme.ink; }
-    ^bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 6px 8px; border-bottom: 1px solid $foam.parse.rail.RailTheme.line; flex: none; }
-    ^title { font-weight: bold; margin-right: 6px; }
-    ^main { flex: 1; min-height: 0; display: flex; }
-    ^left { flex: 1; min-width: 0; position: relative; }
-    ^host { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
-    ^ribbon canvas { display: block; }
-    ^legendPanel { position: absolute; left: 8px; bottom: 8px; max-width: 62%; max-height: 70%; overflow: auto; background: $foam.parse.rail.RailTheme.pageVeil;
-                   border: 1px solid $foam.parse.rail.RailTheme.line; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: $foam.parse.rail.RailTheme.inkSecondary; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-    ^legendGroup { display: flex; flex-wrap: wrap; gap: 3px 12px; align-items: baseline; margin: 2px 0 6px; }
-    ^right { flex: none; display: flex; flex-direction: column; min-height: 0; }
-    ^split { flex: none; width: 7px; cursor: col-resize; background: $foam.parse.rail.RailTheme.splitter; border-left: 1px solid $foam.parse.rail.RailTheme.line; border-right: 1px solid $foam.parse.rail.RailTheme.line; }
-    ^split:hover { background: $foam.parse.rail.RailTheme.highlightSoft; }
-    .foam-u2-TooltipView { background: $foam.parse.rail.RailTheme.tooltipBg; color: $foam.parse.rail.RailTheme.inkOnDark; }   /* u2 turns title= into a tooltip whose colours come from theme tokens; the demo has no theme */
-    ^section { padding: 6px 8px; border-bottom: 1px solid $foam.parse.rail.RailTheme.lineSoft; flex: none; }
-    ^row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-    ^row select, ^row input[type=text] { min-width: 0; flex: 1; }
-    ^gram textarea { width: 100%; box-sizing: border-box; font-size: 12px; font-family: monospace; height: 140px; margin: 6px 0 4px; }
-    ^input { width: 100%; box-sizing: border-box; font-size: 13px; font-family: monospace; height: 30px; resize: vertical; }
-    ^transport { display: flex; gap: 4px; margin: 6px 0 4px; }
-    ^transport button { flex: 1; padding: 3px 0; white-space: nowrap; }
-    ^slider { width: 100%; margin: 0; }
-    ^ribbon { flex: none; overflow: hidden; border-bottom: 1px solid $foam.parse.rail.RailTheme.lineSoft; }
-    ^doc { flex: 1 1 45%; min-height: 0; display: flex; flex-direction: column; border-bottom: 1px solid $foam.parse.rail.RailTheme.line; }
-    ^docToggle { font-size: 12px; margin-left: auto; white-space: nowrap; }
-    ^status { font-size: 12px; font-family: monospace; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 2.6em; padding: 4px 8px; border-bottom: 1px solid $foam.parse.rail.RailTheme.line; background: $foam.parse.rail.RailTheme.statusBg; flex: none; }
-    ^panel { flex: 1; min-height: 0; overflow: auto; padding: 6px 0; }
-    ^swatch { font-weight: bold; }
-    ^toggle { cursor: pointer; color: $foam.parse.rail.RailTheme.matched; font-size: 12px; user-select: none; }
-    ^hint { color: $foam.parse.rail.RailTheme.inkMuted; font-size: 12px; }
+  documentation: `
+    The page: a scene host sized by a ResizeObserver, a toolbar, a legend, and
+    the trace column (input, transport, ribbon or document view, status,
+    derivation). Composition and wiring only. The chrome is declared: every
+    control is a property with a view and every button an action, rendered in
+    a context whose data is this view, so setting a property does what the
+    control does. The scene owns the elements and the pointer (drag pans,
+    wheel zooms, hover tooltips, clicks come back through onHit), the builder
+    owns the mapping, ParseTrace owns the parse; show(n) hands one snapshot to
+    scene, ribbon, document view, panel and status line.
   `,
+
+  constants: {
+    PANEL_WIDTH: 440,      // right column default width (px)
+    PANEL_MIN: 240,        // splitter floor for either column (px)
+    DOC_SHARE: 0.5,        // opening the document view widens the right column to this share of the window
+    PLAY_INTERVAL_MS: 140, // auto-step pace
+    // The foam.parse.Parsers vocabulary injected into typed grammar text, by parameter name.
+    PARSER_NAMES: [ 'seq', 'seq0', 'seq1', 'alt', 'repeat', 'repeat0', 'plus', 'optional', 'sym', 'literal', 'literalIC',
+                    'range', 'chars', 'notChars', 'anyChar', 'eof', 'not', 'peek', 'until', 'until0', 'join', 'substring', 'str' ],
+    DEFAULT_PRESETS: {
+      'comma list (toy)': { input: '[1, [ab, 22], x]', grammar: "{\n  START:   alt(seq(sym('list'), eof()), seq(sym('keyword'), eof())),\n  list:    seq(literal('['), optional(sym('ws')), repeat(sym('item'), seq(optional(sym('ws')), literal(','), optional(sym('ws')))), optional(sym('ws')), literal(']')),\n  item:    alt(sym('number'), sym('word'), sym('list')),\n  number:  plus(range('0', '9')),\n  word:    plus(range('a', 'z')),\n  ws:      plus(literal(' ')),\n  keyword: alt(literal('do'), literal('double'))\n}" },
+      'key=value pairs': { input: 'name=alex;city="new york";tz=est', grammar: "{\n  START: seq(sym('pair'), repeat(seq(literal(';'), sym('pair'))), eof()),\n  pair:  seq(sym('key'), literal('='), sym('value')),\n  key:   plus(range('a', 'z')),\n  value: alt(sym('quoted'), sym('bare')),\n  quoted: seq(literal('\"'), repeat(notChars('\"')), literal('\"')),\n  bare:  plus(notChars(';'))\n}" },
+      'ordered-choice trap': { input: 'integer', grammar: "{\n  START: seq(sym('word'), eof()),\n  word:  alt(literal('in'), literal('int'), literal('integer'))\n}" },
+      'gates and badges': { input: '/* hi */"x"', grammar: "{\n  START:   seq(sym('comment'), sym('quoted'), eof()),\n  comment: seq(literal('/*'), until(literal('*/'))),\n  quoted:  seq(literal('\"'), repeat(not(literal('\"'), anyChar())), literal('\"')),\n  upper:   str(plus(range('a', 'z')))\n}" },
+      'BAD: loop over empty match': { input: 'b', grammar: "{\n  START: seq(sym('as'), eof()),\n  as:    repeat(optional(literal('a')))\n}" },
+      'BAD: left recursion': { input: '1,2', grammar: "{\n  START: seq(sym('list'), eof()),\n  list:  alt(seq(sym('list'), literal(','), sym('item')), sym('item')),\n  item:  range('0', '9')\n}" }
+    }
+  },
 
   messages: [
     { name: 'HINT',              message: 'drag = pan · wheel = zoom · hover = tooltip' },
@@ -74,7 +62,6 @@ foam.CLASS({
     { name: 'LEGEND_TOGGLE',     message: 'Legend' },
     { name: 'DOC_TOGGLE',        message: 'Document view' },
     { name: 'TIP_SPLIT',         message: 'drag to resize the panel' },
-    { name: 'EDIT_GRAMMAR',      message: 'edit grammar' },
     { name: 'LEGEND_NOTATION',   message: 'Notation:' },
     { name: 'LEGEND_TERMINAL',   message: 'rounded yellow box = terminal (text to match)' },
     { name: 'LEGEND_RULE_REF',   message: 'blue box = rule reference' },
@@ -111,55 +98,64 @@ foam.CLASS({
     { name: 'LEGEND_DERIV_OPEN', message: '▶ still open at this step' },
     { name: 'ALL_RULES',         message: 'all rules' },
     { name: 'UNREACHABLE_WORD',  message: 'unreachable' },
-    { name: 'FIT_WIDTH',         message: 'Fit width' },
-    { name: 'FIT_ALL',           message: 'Fit all' },
     { name: 'NO_GRAMMAR',        message: 'no grammar loaded' },
     { name: 'NO_SYMBOLS',        message: 'no symbols' },
-    { name: 'START',             message: 'Parse' },
-    { name: 'BACK',              message: '◀' },
-    { name: 'STEP_ONE',          message: '▶' },
-    { name: 'STEP_OVER',         message: '⏭ over' },
-    { name: 'NEXT_RULE',         message: '⏭ rule' },
-    { name: 'PLAY',              message: '▶▶ play' },
     { name: 'PAUSE',             message: '❚❚ pause' },
-    { name: 'RUN_TO_END',        message: '⏭⏭ end' },
-    { name: 'TIP_PARSE',         message: 'record the parse of the input, then stand at step 0' },
-    { name: 'TIP_BACK',          message: 'one event back' },
-    { name: 'TIP_STEP',          message: 'one event forward' },
-    { name: 'TIP_OVER',          message: 'skip to the end of the attempt just started' },
-    { name: 'TIP_RULE',          message: 'skip to the next rule entry' },
-    { name: 'TIP_PLAY',          message: 'auto-step; any other button pauses' },
-    { name: 'TIP_END',           message: 'jump to the last event' },
     { name: 'SLIDER_HINT',       message: 'scrub through the recorded parse' },
-    { name: 'NOT_PARSED',        message: 'input changed — press Start to parse it' },
+    { name: 'NOT_PARSED',        message: 'input changed — press Parse to parse it' },
     { name: 'LOAD_FIRST',        message: 'load a grammar first' },
     { name: 'PRESET_PLACEHOLDER',     message: 'preset…' },
     { name: 'REGISTERED_PLACEHOLDER', message: 'registered in this page…' },
     { name: 'CLASS_ID_PLACEHOLDER',   message: 'class id, Enter' },
     { name: 'TYPED_TITLE',            message: 'body of a foam.parse symbols() function (dev only)' },
-    { name: 'LOAD_TYPED',             message: 'Load grammar' },
-    { name: 'FIND_PLACEHOLDER',       message: 'find rule…' },
-    { name: 'UNFOLD_PATH',            message: 'Unfold path' },
-    { name: 'FOLD_ALL',               message: 'Fold all' },
+    { name: 'FIND_PLACEHOLDER',       message: 'find rule…' }
   ],
 
-  constants: {
-    PANEL_WIDTH: 440,      // right column default width (px)
-    PANEL_MIN: 240,        // splitter floor for either column (px)
-    DOC_SHARE: 0.5,        // opening the document view widens the right column to this share of the window
-    PLAY_INTERVAL_MS: 140, // auto-step pace
-    // The foam.parse.Parsers vocabulary injected into typed grammar text, by parameter name.
-    PARSER_NAMES: [ 'seq', 'seq0', 'seq1', 'alt', 'repeat', 'repeat0', 'plus', 'optional', 'sym', 'literal', 'literalIC',
-                    'range', 'chars', 'notChars', 'anyChar', 'eof', 'not', 'peek', 'until', 'until0', 'join', 'substring', 'str' ],
-    DEFAULT_PRESETS: {
-      'comma list (toy)': { input: '[1, [ab, 22], x]', grammar: "{\n  START:   alt(seq(sym('list'), eof()), seq(sym('keyword'), eof())),\n  list:    seq(literal('['), optional(sym('ws')), repeat(sym('item'), seq(optional(sym('ws')), literal(','), optional(sym('ws')))), optional(sym('ws')), literal(']')),\n  item:    alt(sym('number'), sym('word'), sym('list')),\n  number:  plus(range('0', '9')),\n  word:    plus(range('a', 'z')),\n  ws:      plus(literal(' ')),\n  keyword: alt(literal('do'), literal('double'))\n}" },
-      'key=value pairs': { input: 'name=alex;city="new york";tz=est', grammar: "{\n  START: seq(sym('pair'), repeat(seq(literal(';'), sym('pair'))), eof()),\n  pair:  seq(sym('key'), literal('='), sym('value')),\n  key:   plus(range('a', 'z')),\n  value: alt(sym('quoted'), sym('bare')),\n  quoted: seq(literal('\"'), repeat(notChars('\"')), literal('\"')),\n  bare:  plus(notChars(';'))\n}" },
-      'ordered-choice trap': { input: 'integer', grammar: "{\n  START: seq(sym('word'), eof()),\n  word:  alt(literal('in'), literal('int'), literal('integer'))\n}" },
-      'gates and badges': { input: '/* hi */"x"', grammar: "{\n  START:   seq(sym('comment'), sym('quoted'), eof()),\n  comment: seq(literal('/*'), until(literal('*/'))),\n  quoted:  seq(literal('\"'), repeat(not(literal('\"'), anyChar())), literal('\"')),\n  upper:   str(plus(range('a', 'z')))\n}" },
-      'BAD: loop over empty match': { input: 'b', grammar: "{\n  START: seq(sym('as'), eof()),\n  as:    repeat(optional(literal('a')))\n}" },
-      'BAD: left recursion': { input: '1,2', grammar: "{\n  START: seq(sym('list'), eof()),\n  list:  alt(seq(sym('list'), literal(','), sym('item')), sym('item')),\n  item:  range('0', '9')\n}" }
-    }
-  },
+  css: `
+    ^ { display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; overflow: hidden; background: $foam.parse.rail.RailTheme.page; color: $foam.parse.rail.RailTheme.ink; }
+    ^bar { display: flex; flex-wrap: wrap; gap: $space-1_5 $space-2_5; align-items: center; padding: $space-1_5 $space-2; border-bottom: 1px solid $foam.parse.rail.RailTheme.line; flex: none; }
+    ^title { margin-right: $space-1_5; }
+    ^check { display: inline-flex; align-items: center; gap: $space-1; }
+    ^main { flex: 1; min-height: 0; display: flex; }
+    ^left { flex: 1; min-width: 0; position: relative; }
+    ^host { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
+    ^ribbon canvas { display: block; }
+    ^legendPanel { position: absolute; left: $space-2; bottom: $space-2; max-width: 62%; max-height: 70%; overflow: auto; background: $foam.parse.rail.RailTheme.pageVeil;
+                   border: 1px solid $foam.parse.rail.RailTheme.line; border-radius: $inputBorderRadius; padding: $space-2 $space-2_5; color: $foam.parse.rail.RailTheme.inkSecondary; box-shadow: $shadow-md; }
+    ^legendGroup { display: flex; flex-wrap: wrap; gap: $space-0_5 $space-3; align-items: baseline; margin: $space-0_5 0 $space-1_5; }
+    ^swatch { font-weight: $font-bold; }
+    ^swatch-matched { color: $foam.parse.rail.RailTheme.matched; }
+    ^swatch-trying  { color: $foam.parse.rail.RailTheme.trying; }
+    ^swatch-failed  { color: $foam.parse.rail.RailTheme.failed; }
+    ^swatch-text    { color: $foam.parse.rail.RailTheme.text; }
+    ^legend-consumed   { background: $foam.parse.rail.RailTheme.consumedBg; }
+    ^legend-open       { border-bottom: 3px solid $foam.parse.rail.RailTheme.trying; }
+    ^legend-died       { background: $foam.parse.rail.RailTheme.failBg; }
+    ^legend-current    { border: 1px dashed $foam.parse.rail.RailTheme.muted; padding: 0 $space-0_5; }
+    ^legend-under-test { border: 2px solid $foam.parse.rail.RailTheme.trying; padding: 0 $space-0_5; }
+    ^legend-matched    { color: $foam.parse.rail.RailTheme.matched; }
+    ^legend-trying     { color: $foam.parse.rail.RailTheme.trying; }
+    ^right { flex: none; display: flex; flex-direction: column; min-height: 0; }
+    ^split { flex: none; width: 0.7rem; cursor: col-resize; background: $foam.parse.rail.RailTheme.splitter; border-left: 1px solid $foam.parse.rail.RailTheme.line; border-right: 1px solid $foam.parse.rail.RailTheme.line; }
+    ^split:hover { background: $foam.parse.rail.RailTheme.highlightSoft; }
+    /* u2 turns title= into a tooltip mounted on body, outside ^, whose colours come from theme tokens the demo does not have. */
+    .foam-u2-TooltipView { background: $foam.parse.rail.RailTheme.tooltipBg; color: $foam.parse.rail.RailTheme.inkOnDark; }
+    ^section { padding: $space-1_5 $space-2; border-bottom: 1px solid $foam.parse.rail.RailTheme.lineSoft; flex: none; }
+    ^row { display: flex; gap: $space-1_5; align-items: center; flex-wrap: wrap; }
+    ^row > * { min-width: 0; flex: 1; }
+    ^row > .foam-u2-ActionView { flex: none; }
+    ^gram textarea { width: 100%; box-sizing: border-box; font-family: monospace; margin: $space-1_5 0 $space-1; }
+    ^input textarea { width: 100%; box-sizing: border-box; font-family: monospace; resize: vertical; }
+    ^transport { display: flex; gap: $space-1; margin: $space-1_5 0 $space-1; }
+    ^transport > * { flex: 1; min-width: 0; }
+    ^slider input { width: 100%; margin: 0; }
+    ^ribbon { flex: none; overflow: hidden; border-bottom: 1px solid $foam.parse.rail.RailTheme.lineSoft; }
+    ^doc { flex: 1 1 45%; min-height: 0; display: flex; flex-direction: column; border-bottom: 1px solid $foam.parse.rail.RailTheme.line; }
+    ^docToggle { margin-left: auto; white-space: nowrap; }
+    ^status { font-family: monospace; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 2.6em; padding: $space-1 $space-2; border-bottom: 1px solid $foam.parse.rail.RailTheme.line; background: $foam.parse.rail.RailTheme.statusBg; flex: none; }
+    ^panel { flex: 1; min-height: 0; overflow: auto; padding: $space-1_5 0; }
+    ^hint { color: $foam.parse.rail.RailTheme.inkMuted; }
+  `,
 
   properties: [
     { name: 'grammar', documentation: 'A foam.parse.Grammar; set it (or call useGrammar) to draw.' },
@@ -167,31 +163,99 @@ foam.CLASS({
     { name: 'builder' },
     { class: 'String', name: 'startSymbol' },
     { class: 'String', name: 'status' },
-    { class: 'Boolean', name: 'showAll', documentation: 'Include rules unreachable from the start symbol.', postSet: function() { this.rebuildStrips(); } },
+    {
+      class: 'Boolean',
+      name: 'showAll',
+      documentation: 'Include rules unreachable from the start symbol.',
+      view: { class: 'foam.u2.CheckBox' },
+      postSet: function() { this.rebuildStrips(); }
+    },
     { class: 'Int', name: 'unreachableCount' },
-    { class: 'String', name: 'findText', documentation: 'Substring filter on rule names; empty = every rule.', postSet: function() { this.rebuildStrips(); } },
-    { class: 'String', name: 'input', value: '' },
-    { name: 'trace', documentation: 'The recorded ParseTrace, or null before Start.' },
-    { class: 'Int', name: 'step' },
+    {
+      class: 'String',
+      name: 'findText',
+      documentation: 'Substring filter on rule names; empty = every rule. Enter in the field goes to the first match.',
+      view: { class: 'foam.u2.TextField', onKey: true },
+      postSet: function() { this.rebuildStrips(); }
+    },
+    {
+      class: 'Boolean',
+      name: 'showValues',
+      documentation: "The scene's showValues as a property of the view, so the toolbar binds to it.",
+      factory: function() { return this.scene.showValues; },
+      view: { class: 'foam.u2.CheckBox' },
+      postSet: function(_, v) { this.scene.showValues = v; }
+    },
+    {
+      class: 'Boolean',
+      name: 'showLanes',
+      documentation: "The scene's showLanes as a property of the view, so the toolbar binds to it.",
+      factory: function() { return this.scene.showLanes; },
+      view: { class: 'foam.u2.CheckBox' },
+      postSet: function(_, v) { this.scene.showLanes = v; }
+    },
+    {
+      class: 'String',
+      name: 'input',
+      documentation: 'The text to parse. Editing it drops the trace: plain text until Parse.',
+      view: { class: 'foam.u2.tag.TextArea', onKey: true, rows: 1 },
+      postSet: function() { this.inputChanged(); }
+    },
+    { name: 'trace', documentation: 'The recorded ParseTrace, or null before Parse.' },
+    {
+      class: 'Int',
+      name: 'step',
+      documentation: 'Position in the trace. The slider binds to it; show() keeps it in step with the snapshot shown.',
+      view: { class: 'foam.u2.RangeView', minValue: 0, step: 1 },
+      postSet: function(_, n) { if ( this.feedback_ ) return; this.stopPlay(); this.show(n); }
+    },
+    { class: 'Int', name: 'traceLength', documentation: 'Length of the trace, 0 without one; the slider maximum.' },
+    { class: 'Boolean', name: 'playing', documentation: 'Auto-stepping; togglePlay flips it.' },
     { name: 'ribbon', factory: function() { return this.RailInputRibbon.create({ theme: this.scene.theme, measure: this.scene.measure }); } },
     { name: 'panel',  factory: function() { var self = this; return this.DerivationPanel.create({ onSelect: function(p) { self.highlight(p); } }); } },
     { name: 'doc',    factory: function() { var self = this; return this.DocumentView.create({ onSelect: function(p) { self.highlight(p); } }); } },
     { name: 'hostEl' },
-    { name: 'inputEl' },
-    { name: 'sliderEl' },
-    { name: 'playBtn' },
     { name: 'ribbonEl' },
     { name: 'playTimer_' },
+    { name: 'feedback_', documentation: 'True while show() writes step, so the step postSet does not call show() again.' },
     { name: 'presets', factory: function() { return this.DEFAULT_PRESETS; }, documentation: 'name -> { input, grammar: symbols() body as text }.' },
-    { class: 'Boolean', name: 'allowTypedGrammar', documentation: 'Dev only: show the textarea that compiles typed grammar text. Off by default; the demo page turns it on.' },
-    { class: 'String', name: 'grammarText' },
-    { name: 'grammarEl' },
-    { name: 'registeredEl' },
-    { name: 'classIdEl' },
+    {
+      class: 'String',
+      name: 'preset',
+      documentation: 'Name of the preset in use; setting it loads that preset (grammar and input together).',
+      view: { class: 'foam.u2.view.ChoiceView' },
+      postSet: function(_, n) { if ( n ) this.loadPreset(n); }
+    },
+    {
+      class: 'String',
+      name: 'registered',
+      documentation: 'Index into registered_ of the grammar picked from the page; setting it loads that grammar.',
+      view: { class: 'foam.u2.view.ChoiceView' },
+      postSet: function(_, n) { if ( n ) this.loadRegistered(n); }
+    },
+    {
+      class: 'String',
+      name: 'classId',
+      documentation: 'A class id typed by hand; Enter in the field loads it.',
+      view: { class: 'foam.u2.TextField', onKey: true }
+    },
+    { class: 'Boolean', name: 'allowTypedGrammar', documentation: 'Dev only: show the editor that compiles typed grammar text. Off by default; the demo page turns it on.' },
+    {
+      class: 'String',
+      name: 'grammarText',
+      documentation: 'Body of a foam.parse symbols() function; loadTyped compiles it. Presets and page grammars write it for reference.',
+      view: { class: 'foam.u2.tag.TextArea', onKey: true, rows: 8 }
+    },
     { name: 'registered_', factory: function() { return []; }, documentation: '[{ label, load }] grammars found in the page by scanRegistered().' },
-    { class: 'Boolean', name: 'legendShown',  documentation: 'Legend panel over the canvas corner; off by default.' },
+    {
+      name: 'registeredChoices',
+      documentation: 'registered_ as [index, label] choices for the picker.',
+      expression: function(registered_) { return registered_.map(function(f, i) { return [ String(i), f.label ]; }); }
+    },
+    { class: 'Boolean', name: 'legendShown',  documentation: 'Legend panel over the canvas corner; off by default.', view: { class: 'foam.u2.CheckBox' } },
     { class: 'Boolean', name: 'grammarShown', documentation: 'Typed-grammar editor unfolded (dev only).' },
     { class: 'Boolean', name: 'documentShown', documentation: 'Whole input as decorated text in place of the one-line ribbon.',
+      view: { class: 'foam.u2.CheckBox' },
       postSet: function(_, on) { if ( on && this.rightWidth === this.PANEL_WIDTH ) this.rightWidth = Math.max(this.PANEL_WIDTH, Math.round(window.innerWidth * this.DOC_SHARE)); } },
     { class: 'Int', name: 'rightWidth', factory: function() { return this.PANEL_WIDTH; }, documentation: 'Right column width in px; the splitter drags it, opening the document view widens it once.' },
     { class: 'Boolean', name: 'debugHook', documentation: 'Expose window.__rail so scripted checks can drive the page deterministically.' }
@@ -201,14 +265,17 @@ foam.CLASS({
     function render() {
       var self = this;
       this.addClass(this.myClass())
-        .start('div').addClass(this.myClass('bar')).call(function() { self.renderBar(this); }).end()
-        .start('div').addClass(this.myClass('main'))
-          .start('div').addClass(this.myClass('left')).call(function() { self.renderCanvas(this); }).end()
-          .start('div').addClass(this.myClass('split')).attrs({ title: this.TIP_SPLIT }).on('pointerdown', function(e) { self.startSplit(e); }).end()
-          .start('div').addClass(this.myClass('right')).style({ width: this.rightWidth$.map(function(w) { return w + 'px'; }) })
-            .call(function() { self.renderPanels(this); })
+        // The chrome binds to this view: a property view reads data.<prop>, an action runs on data.
+        .startContext({ data: this })
+          .start('div').addClass(this.myClass('bar')).call(function() { self.renderBar(this); }).end()
+          .start('div').addClass(this.myClass('main'))
+            .start('div').addClass(this.myClass('left')).call(function() { self.renderCanvas(this); }).end()
+            .start('div').addClass(this.myClass('split')).attrs({ title: this.TIP_SPLIT }).on('pointerdown', function(e) { self.startSplit(e); }).end()
+            .start('div').addClass(this.myClass('right')).style({ width: this.rightWidth$.map(function(w) { return w + 'px'; }) })
+              .call(function() { self.renderPanels(this); })
+            .end()
           .end()
-        .end();
+        .endContext();
 
       // The scene's viewport follows the host element's size; the ribbon follows its column.
       this.hostEl.el().then(function(el) {
@@ -251,52 +318,43 @@ foam.CLASS({
       }
     },
 
+    function check(e, prop, label) {
+      /** A checkbox bound to a Boolean property of this view. The CheckBox puts its label beside itself in the parent, so each gets a span of its own. */
+      return e.start('span').addClass(this.myClass('check')).start(prop, { label$: foam.lang.Slot.isInstance(label) ? label : foam.lang.ConstantSlot.create({ value: label }) }).end().end();
+    },
+
     function renderBar(e) {
-      /** Top toolbar: camera, rule filter, find/unfold, cache and legend toggles. */
+      /** Top toolbar: camera, rule filter, find/unfold, value and legend toggles. */
       var self = this;
-      e.start('span').addClass(this.myClass('title')).add(this.TITLE).end()
-        .start('button').add(this.FIT_WIDTH).on('click', function() { self.scene.fitWidth(); }).end()
-        .start('button').add(this.FIT_ALL).on('click', function() { self.scene.fitAll(); }).end()
-        .start('label')
-          .start('input').attrs({ type: 'checkbox' }).on('change', function(e) { self.showAll = e.target.checked; }).end()
-          .add(' ', this.ALL_RULES, ' (', this.unreachableCount$, ' ', this.UNREACHABLE_WORD, ')')
+      e.start('span').addClass(this.myClass('title')).addClass('p-bold').add(this.TITLE).end()
+        .start(this.FIT_WIDTH, { size: 'SMALL' }).end()
+        .start(this.FIT_ALL, { size: 'SMALL' }).end()
+        .call(function() { self.check(this, self.SHOW_ALL, self.unreachableCount$.map(function(n) { return self.ALL_RULES + ' (' + n + ' ' + self.UNREACHABLE_WORD + ')'; })); })
+        .start(this.FIND_TEXT, { placeholder: this.FIND_PLACEHOLDER })
+          .on('keydown', function(ev) { if ( ev.key === 'Enter' ) self.goToFirstMatch(); })
         .end()
-        .start('input').attrs({ placeholder: this.FIND_PLACEHOLDER })
-          .on('input', function(e) { self.findText = e.target.value.trim(); })
-          .on('keydown', function(e) { if ( e.key === 'Enter' && self.scene.strips.length ) self.goToRule(self.scene.strips[0].name); })
-        .end()
-        .start('button').add(this.UNFOLD_PATH).on('click', function() { self.unfoldPath(); }).end()
-        .start('button').add(this.FOLD_ALL).on('click', function() { self.foldAll(); }).end()
-        .start('label')
-          .start('input').attrs({ type: 'checkbox', checked: this.scene.showValues$ }).on('change', function(e) { self.scene.showValues = e.target.checked; }).end()
-          .add(' ', this.VALUES_TOGGLE)
-        .end()
-        .start('label')
-          .start('input').attrs({ type: 'checkbox', checked: this.scene.showLanes$ }).on('change', function(e) { self.scene.showLanes = e.target.checked; }).end()
-          .add(' ', this.LANES_TOGGLE)
-        .end()
-        .start('label')
-          .start('input').attrs({ type: 'checkbox', checked: this.legendShown$ }).on('change', function(e) { self.legendShown = e.target.checked; }).end()
-          .add(' ', this.LEGEND_TOGGLE)
-        .end()
-        .start('span').addClass(this.myClass('hint')).add(this.HINT).end();
+        .start(this.UNFOLD_PATH, { size: 'SMALL' }).end()
+        .start(this.FOLD_ALL, { size: 'SMALL' }).end()
+        .call(function() { self.check(this, self.SHOW_VALUES, self.VALUES_TOGGLE); })
+        .call(function() { self.check(this, self.SHOW_LANES, self.LANES_TOGGLE); })
+        .call(function() { self.check(this, self.LEGEND_SHOWN, self.LEGEND_TOGGLE); })
+        .start('span').addClass(this.myClass('hint')).addClass('p-sm').add(this.HINT).end();
     },
 
     function renderCanvas(e) {
-      /** Left column: the scene host and the legend under it. */
-      var self = this, T = this.scene.theme, O = this.Outcome;
-      var tone = function(outcome) { return { color: T.outcomeColor(outcome) }; };
+      /** Left column: the scene host and the legend over its corner. */
+      var self = this;
       var legendGroup = function(e, title) { return e.start('div').addClass(self.myClass('legendGroup')).start('b').add(title).end(); };
       // Swatch carries the colour or the fade; the words stay full contrast, so a dim
-      // state is never explained by dim text.
-      var swatch = function(e, style, label) {
+      // state is never explained by dim text. Tier alphas are data from the enum, not a style choice.
+      var swatch = function(e, cls, label, opt_tier) {
         return e.start('span')
-          .start('span').addClass(self.myClass('swatch')).style(style).add('▬').end()
+          .start('span').addClass(self.myClass('swatch')).addClass(self.myClass(cls)).callIf(opt_tier, function() { this.style({ opacity: opt_tier.alpha }); }).add('▬').end()
           .add(' ' + label)
         .end();
       };
       e.start('div', null, this.hostEl$).addClass(this.myClass('host')).add(this.scene).end()
-        .start('div').addClass(this.myClass('legendPanel')).show(this.legendShown$)
+        .start('div').addClass(this.myClass('legendPanel')).addClass('p-sm').show(this.legendShown$)
           .call(function() {
             legendGroup(this, self.LEGEND_NOTATION)
               .start('span').add(self.LEGEND_TERMINAL).end()
@@ -313,26 +371,26 @@ foam.CLASS({
               .start('span').add(self.LEGEND_BADGES).end()
             .end();
             legendGroup(this, self.LEGEND_TRACE)
-              .call(function() { swatch(this, tone(O.MATCHED), self.LEGEND_MATCHED); })
-              .call(function() { swatch(this, tone(O.TRYING),  self.LEGEND_TRYING); })
-              .call(function() { swatch(this, tone(O.FAILED),  self.LEGEND_FAILED); })
-              .call(function() { swatch(this, { color: T.outcomeColor(O.MATCHED), opacity: self.Tier.HISTORY.alpha }, self.LEGEND_HISTORY); })
-              .call(function() { swatch(this, { color: T.resolve('text'), opacity: self.Tier.NEVER.alpha }, self.LEGEND_NEVER); })
+              .call(function() { swatch(this, 'swatch-matched', self.LEGEND_MATCHED); })
+              .call(function() { swatch(this, 'swatch-trying',  self.LEGEND_TRYING); })
+              .call(function() { swatch(this, 'swatch-failed',  self.LEGEND_FAILED); })
+              .call(function() { swatch(this, 'swatch-matched', self.LEGEND_HISTORY, self.Tier.HISTORY); })
+              .call(function() { swatch(this, 'swatch-text',    self.LEGEND_NEVER,   self.Tier.NEVER); })
               .start('span').add(self.LEGEND_VALUES).end()
               .start('span').add(self.LEGEND_COUNTER).end()
               .start('span').add(self.LEGEND_SELECTED).end()
             .end();
             legendGroup(this, self.LEGEND_RIBBON)
-              .start('span').style({ background: T.resolve('consumedBg') }).add(self.LEGEND_CONSUMED).end()
-              .start('span').style({ borderBottom: '3px solid ' + T.outcomeColor(O.TRYING) }).add(self.LEGEND_OPEN).end()
-              .start('span').style({ background: T.resolve('failBg') }).add(self.LEGEND_DIED).end()
-              .start('span').style({ border: '1px dashed ' + T.resolve('muted'), padding: '0 3px' }).add(self.LEGEND_CURRENT).end()
-              .start('span').style({ border: '2px solid ' + T.outcomeColor(O.TRYING), padding: '0 3px' }).add(self.LEGEND_UNDER_TEST).end()
+              .start('span').addClass(self.myClass('legend-consumed')).add(self.LEGEND_CONSUMED).end()
+              .start('span').addClass(self.myClass('legend-open')).add(self.LEGEND_OPEN).end()
+              .start('span').addClass(self.myClass('legend-died')).add(self.LEGEND_DIED).end()
+              .start('span').addClass(self.myClass('legend-current')).add(self.LEGEND_CURRENT).end()
+              .start('span').addClass(self.myClass('legend-under-test')).add(self.LEGEND_UNDER_TEST).end()
               .start('span').add(self.LEGEND_CARET).end()
             .end();
             legendGroup(this, self.LEGEND_DERIV)
-              .start('span').style(tone(O.MATCHED)).add(self.LEGEND_DERIV_MATCHED).end()
-              .start('span').style(tone(O.TRYING)).add(self.LEGEND_DERIV_OPEN).end()
+              .start('span').addClass(self.myClass('legend-matched')).add(self.LEGEND_DERIV_MATCHED).end()
+              .start('span').addClass(self.myClass('legend-trying')).add(self.LEGEND_DERIV_OPEN).end()
             .end();
           })
         .end();
@@ -343,51 +401,38 @@ foam.CLASS({
       var self = this;
       e.start('div').addClass(this.myClass('section')).addClass(this.myClass('gram'))
           .start('div').addClass(this.myClass('row'))
-            .start('select').on('change', function(e) { if ( e.target.value ) self.usePreset(e.target.value); })
-              .start('option').attrs({ value: '' }).add(this.PRESET_PLACEHOLDER).end()
-              .forEach(Object.keys(this.presets), function(k) { this.start('option').attrs({ value: k }).add(k).end(); })
+            .start(this.PRESET, { placeholder: this.PRESET_PLACEHOLDER, choices: Object.keys(this.presets).map(function(k) { return [ k, k ]; }) }).end()
+            .start(this.REGISTERED, { placeholder: this.REGISTERED_PLACEHOLDER, choices$: this.registeredChoices$ }).end()
+            .start(this.CLASS_ID, { placeholder: this.CLASS_ID_PLACEHOLDER })
+              .on('keydown', function(ev) { if ( ev.key === 'Enter' ) self.loadClassId(self.classId); })
             .end()
-            .start('select', null, this.registeredEl$).on('change', function(e) { if ( e.target.value ) self.loadRegistered(e.target.value); })
-              .start('option').attrs({ value: '' }).add(this.REGISTERED_PLACEHOLDER).end()
-            .end()
-            .start('input', null, this.classIdEl$).attrs({ type: 'text', placeholder: this.CLASS_ID_PLACEHOLDER })
-              .on('keydown', function(e) { if ( e.key === 'Enter' ) self.loadClassId(e.target.value.trim()); }).end()
-            .callIf(this.allowTypedGrammar, function() {
-              this.start('span').addClass(self.myClass('toggle'))
-                .add(self.grammarShown$.map(function(o) { return ( o ? '▾ ' : '▸ ' ) + self.EDIT_GRAMMAR; }))
-                .on('click', function() { self.grammarShown = ! self.grammarShown; })
-              .end();
-            })
+            .start(this.TOGGLE_GRAMMAR, { size: 'SMALL', label$: this.grammarShown$.map(function(o) { return ( o ? '▾ ' : '▸ ' ) + self.TOGGLE_GRAMMAR.label; }) }).end()
           .end()
-          .callIf(this.allowTypedGrammar, function() {
-            this.start('div').show(self.grammarShown$)
-              .start('div').addClass(self.myClass('hint')).add(self.TYPED_TITLE).end()
-              .start('textarea', null, self.grammarEl$).attrs({ value: self.grammarText$, spellcheck: false }).on('input', function(e) { self.grammarText = e.target.value; }).end()
-              .start('button').add(self.LOAD_TYPED).on('click', function() { self.loadTyped(); }).end()
-            .end();
-          })
+          .start('div').show(this.grammarShown$)
+            .start('div').addClass(this.myClass('hint')).addClass('p-sm').add(this.TYPED_TITLE).end()
+            .start(this.GRAMMAR_TEXT).attrs({ spellcheck: false }).end()
+            .start(this.LOAD_TYPED, { size: 'SMALL' }).end()
+          .end()
         .end()
-        .start('div').addClass(this.myClass('section'))
-          .start('textarea', null, this.inputEl$).addClass(this.myClass('input')).attrs({ value: this.input$, spellcheck: false }).on('input', function(e) { self.setInput(e.target.value); }).end()
+        .start('div').addClass(this.myClass('section')).addClass(this.myClass('input'))
+          .start(this.INPUT).attrs({ spellcheck: false }).end()
           .start('div').addClass(this.myClass('transport'))
-            .start('button').attrs({ title: this.TIP_PARSE }).add(this.START).on('click', function() { self.stopPlay(); self.record(0); }).end()
-            .start('button').attrs({ title: this.TIP_BACK }).add(this.BACK).on('click', function() { self.stepBack(); }).end()
-            .start('button').attrs({ title: this.TIP_STEP }).add(this.STEP_ONE).on('click', function() { self.stepOne(); }).end()
-            .start('button').attrs({ title: this.TIP_OVER }).add(this.STEP_OVER).on('click', function() { self.stepOver(); }).end()
-            .start('button').attrs({ title: this.TIP_RULE }).add(this.NEXT_RULE).on('click', function() { self.nextRule(); }).end()
-            .start('button', null, this.playBtn$).attrs({ title: this.TIP_PLAY }).add(this.PLAY).on('click', function() { self.togglePlay(); }).end()
-            .start('button').attrs({ title: this.TIP_END }).add(this.RUN_TO_END).on('click', function() { self.runToEnd(); }).end()
+            .start(this.PARSE, { size: 'SMALL' }).end()
+            .start(this.STEP_BACK, { size: 'SMALL' }).end()
+            .start(this.STEP_ONE, { size: 'SMALL' }).end()
+            .start(this.STEP_OVER, { size: 'SMALL' }).end()
+            .start(this.NEXT_RULE, { size: 'SMALL' }).end()
+            .start(this.TOGGLE_PLAY, { size: 'SMALL', label$: this.playing$.map(function(p) { return p ? self.PAUSE : self.TOGGLE_PLAY.label; }) }).end()
+            .start(this.RUN_TO_END, { size: 'SMALL' }).end()
           .end()
-          .start('input', null, this.sliderEl$).attrs({ type: 'range', min: 0, max: 0, value: 0, step: 1, title: this.SLIDER_HINT }).addClass(this.myClass('slider'))
-            .on('input', function(e) { self.stopPlay(); self.show(+e.target.value); }).end()
-          .start('label').addClass(this.myClass('docToggle'))
-            .start('input').attrs({ type: 'checkbox', checked: this.documentShown$ }).on('change', function(e) { self.documentShown = e.target.checked; }).end()
-            .add(' ', this.DOC_TOGGLE)
+          .start('div').addClass(this.myClass('slider'))
+            .start(this.STEP, { maxValue$: this.traceLength$ }).attrs({ title: this.SLIDER_HINT }).end()
           .end()
+          .call(function() { self.check(this, self.DOCUMENT_SHOWN, self.DOC_TOGGLE).addClass(self.myClass('docToggle')); })
         .end()
         .start('div', null, this.ribbonEl$).addClass(this.myClass('ribbon')).hide(this.documentShown$).add(this.ribbon).end()
         .start('div').addClass(this.myClass('doc')).show(this.documentShown$).add(this.doc).end()
-        .start('div').addClass(this.myClass('status')).add(this.status$).end()
+        .start('div').addClass(this.myClass('status')).addClass('p-sm').add(this.status$).end()
         .start('div').addClass(this.myClass('panel')).add(this.panel).end();
     },
 
@@ -404,26 +449,19 @@ foam.CLASS({
       return this.Grammar.create({ symbols: fn });
     },
 
-    function loadTyped() {
-      if ( ! this.allowTypedGrammar ) return;
-      try { this.useGrammar(this.compileGrammar(this.grammarText)); }
-      catch (x) { this.status = 'grammar error: ' + ( x.message || x ); }
+    function usePreset(name) {
+      /** Public entry: the preset property does the loading. */
+      this.preset = name;
     },
 
-    function usePreset(name) {
+    function loadPreset(name) {
       /** A preset swaps grammar and sample input together and loads at once. */
       var p = this.presets[name];
       if ( ! p ) return;
       this.grammarText = p.grammar;
-      this.syncGrammarEl();
-      this.setInput(p.input);
+      this.input = p.input;
       try { this.useGrammar(this.compileGrammar(p.grammar)); }
       catch (x) { this.status = 'preset error: ' + ( x.message || x ); }
-    },
-
-    function syncGrammarEl() {
-      var self = this;
-      if ( this.grammarEl ) this.grammarEl.el().then(function(el) { el.value = self.grammarText; });
     },
 
     function scanRegistered() {
@@ -451,16 +489,12 @@ foam.CLASS({
       });
       found.sort(function(a, b) { return a.label < b.label ? -1 : 1; });
       this.registered_ = found;
-      if ( this.registeredEl ) this.registeredEl.el().then(function(el) {
-        found.forEach(function(f, i) { var o = document.createElement('option'); o.value = String(i); o.textContent = f.label; el.appendChild(o); });
-      });
     },
 
     function loadRegistered(i) {
       try {
         var f = this.registered_[+i];
         this.grammarText = '// loaded from ' + f.label + ' (read-only; pick a preset to type your own)';
-        this.syncGrammarEl();
         this.useGrammar(f.load());
       } catch (x) { this.status = 'could not load: ' + ( x.message || x ); }
     },
@@ -487,10 +521,7 @@ foam.CLASS({
       this.startSymbol = this.builder.startSymbol;
       this.unreachableCount = this.builder.unreachableNames().length;
       this.rebuildStrips();
-      this.trace = null;
-      this.ribbon.text = this.input; this.ribbon.snapshot = null;
-      this.doc.text = this.input; this.doc.snapshot = null;
-      this.panel.snapshot = null; this.panel.filterParser = null;
+      this.dropTrace();
       this.status = grammar.symbols.length ? grammar.symbols.length + ' rules, start = ' + this.startSymbol : this.NO_SYMBOLS;
       this.scene.fitWidth();
     },
@@ -498,7 +529,7 @@ foam.CLASS({
     function rebuildStrips() {
       /** Strips follow the showAll toggle; the camera is kept (a toggle should not jump the view). */
       if ( ! this.builder ) return;
-      this.scene.setStrips(this.builder.buildReachableStrips(this.showAll, this.findText));
+      this.scene.setStrips(this.builder.buildReachableStrips(this.showAll, this.findText.trim()));
       if ( this.trace ) this.show(this.step);
     },
 
@@ -507,50 +538,36 @@ foam.CLASS({
       this.scene.flashStrip(name);
     },
 
-    function unfoldPath() {
-      /** Open every rule reference on the derivation path, inside the start strip only, top-down; then re-light and re-fit. */
-      if ( ! this.trace ) return;
-      var self = this, snap = this.trace.at(this.step);
-      if ( ! snap.derivation ) return;
-      var startStrip = this.scene.stripFor(this.startSymbol);
-      var inStart = function(el) { for ( var p = el ; p ; p = p.parent ) if ( p === startStrip ) return true; return false; };
-      var todo = [ snap.derivation ], node;
-      while ( todo.length ) {                                    // explicit stack: a recursion staircase is deep
-        node = todo.pop();
-        if ( foam.parse.Symbol.isInstance(node.parser) ) {
-          self.scene.elementsFor(node.parser).forEach(function(el) { if ( self.RailSymRef.isInstance(el) && inStart(el) ) el.unfold(); });
-        }
-        for ( var i = node.kids.length - 1 ; i >= 0 ; i-- ) todo.push(node.kids[i]);
-      }
-      this.scene.rebuildStrip(startStrip);
-      this.show(this.step);
-      this.scene.fitWidth();
-    },
-
-    function foldAll() {
-      var self = this, open;
-      do {
-        open = [];
-        this.scene.eachElement(function(el) { if ( self.RailSymRef.isInstance(el) && el.unfolded ) open.push(el); });
-        open.forEach(function(el) { el.fold(); });
-      } while ( open.length );
-      this.scene.strips.forEach(function(s) { self.scene.rebuildStrip(s); });
-      if ( this.trace ) this.show(this.step);
+    function goToFirstMatch() {
+      /** Enter in the find field: flash the first strip the filter left. */
+      if ( this.scene.strips.length ) this.goToRule(this.scene.strips[0].name);
     },
 
     // ---- trace lifecycle -------------------------------------------------
 
     function setInput(text) {
-      /** Editing the input invalidates the trace: back to plain text until Start. */
-      this.stopPlay();
+      /** Public entry: the input property does the work. */
       this.input = text;
-      if ( this.inputEl ) this.inputEl.el().then(function(el) { if ( el.value !== text ) el.value = text; });
-      this.trace = null;
-      this.ribbon.text = text; this.ribbon.snapshot = null;
-      this.doc.text = text; this.doc.snapshot = null;
+    },
+
+    function inputChanged() {
+      /** Editing the input invalidates the trace: back to plain text until Parse. */
+      this.stopPlay();
+      this.dropTrace();
       this.scene.applyTrace(null);
-      this.panel.snapshot = null;
       this.status = this.NOT_PARSED;
+    },
+
+    function dropTrace() {
+      /** No trace: every panel shows the plain input. */
+      this.trace = null;
+      this.feedback_ = true;
+      this.traceLength = 0;
+      this.step = 0;
+      this.feedback_ = false;
+      this.ribbon.text = this.input; this.ribbon.snapshot = null;
+      this.doc.text = this.input; this.doc.snapshot = null;
+      this.panel.snapshot = null; this.panel.filterParser = null;
     },
 
     function record(opt_step) {
@@ -565,40 +582,21 @@ foam.CLASS({
       /** Everything visible follows one snapshot. */
       if ( ! this.trace ) return;
       var snap = this.trace.at(n);
+      this.feedback_ = true;
       this.step = snap.step;
+      this.traceLength = snap.total;
+      this.feedback_ = false;
       this.scene.applyTrace(snap);
       this.ribbon.snapshot = snap;
       this.doc.snapshot = snap;
       this.panel.snapshot = snap;
       this.status = snap.summary();
-      if ( this.sliderEl ) this.sliderEl.el().then(function(el) { el.max = snap.total; el.value = snap.step; });
-    },
-
-    function stepBack() { this.stopPlay(); if ( this.trace ) this.show(this.step - 1); },
-    function stepOne()  { this.stopPlay(); if ( ! this.trace ) this.record(0); else this.show(this.step + 1); },
-    function stepOver() { this.stopPlay(); if ( ! this.trace ) this.record(0); else this.show(this.trace.stepOverFrom(this.step)); },
-    function nextRule() { this.stopPlay(); if ( ! this.trace ) this.record(0); else this.show(this.trace.nextRuleFrom(this.step)); },
-    function runToEnd() { this.stopPlay(); if ( ! this.trace ) this.record(); else this.show(this.trace.length()); },
-
-    function togglePlay() {
-      /** Auto-step at a human pace; stops at the end or on any other navigation. Background tabs throttle timers. */
-      if ( this.playTimer_ ) { this.stopPlay(); return; }
-      if ( ! this.trace ) this.record(0);
-      if ( ! this.trace ) return;                                  // no grammar
-      if ( this.step >= this.trace.length() ) this.show(0);
-      var self = this;
-      this.playTimer_ = setInterval(function() {
-        if ( self.step >= self.trace.length() ) { self.stopPlay(); return; }
-        self.show(self.step + 1);
-      }, this.PLAY_INTERVAL_MS);
-      if ( this.playBtn ) this.playBtn.removeAllChildren().add(this.PAUSE);
     },
 
     function stopPlay() {
-      if ( ! this.playTimer_ ) return;
-      clearInterval(this.playTimer_);
+      if ( this.playTimer_ ) clearInterval(this.playTimer_);
       this.playTimer_ = null;
-      if ( this.playBtn ) this.playBtn.removeAllChildren().add(this.PLAY);
+      this.playing = false;
     },
 
     function highlight(parser) { this.scene.highlightParser(parser); },
@@ -635,6 +633,134 @@ foam.CLASS({
       var strip = this.scene.stripOf(el);
       if ( strip ) this.scene.rebuildStrip(strip);
       if ( this.trace ) this.show(this.step);
+    }
+  ],
+
+  actions: [
+    {
+      name: 'fitWidth',
+      label: 'Fit width',
+      code: function() { this.scene.fitWidth(); }
+    },
+    {
+      name: 'fitAll',
+      label: 'Fit all',
+      code: function() { this.scene.fitAll(); }
+    },
+    {
+      name: 'unfoldPath',
+      label: 'Unfold path',
+      toolTip: 'open every rule reference on the derivation path, inside the start strip',
+      isEnabled: function(trace) { return !! trace; },
+      code: function() {
+        /** Open every rule reference on the derivation path, inside the start strip only, top-down; then re-light and re-fit. */
+        var self = this, snap = this.trace.at(this.step);
+        if ( ! snap.derivation ) return;
+        var startStrip = this.scene.stripFor(this.startSymbol);
+        var inStart = function(el) { for ( var p = el ; p ; p = p.parent ) if ( p === startStrip ) return true; return false; };
+        var todo = [ snap.derivation ], node;
+        while ( todo.length ) {                                    // explicit stack: a recursion staircase is deep
+          node = todo.pop();
+          if ( foam.parse.Symbol.isInstance(node.parser) ) {
+            self.scene.elementsFor(node.parser).forEach(function(el) { if ( self.RailSymRef.isInstance(el) && inStart(el) ) el.unfold(); });
+          }
+          for ( var i = node.kids.length - 1 ; i >= 0 ; i-- ) todo.push(node.kids[i]);
+        }
+        this.scene.rebuildStrip(startStrip);
+        this.show(this.step);
+        this.scene.fitWidth();
+      }
+    },
+    {
+      name: 'foldAll',
+      label: 'Fold all',
+      code: function() {
+        var self = this, open;
+        do {
+          open = [];
+          this.scene.eachElement(function(el) { if ( self.RailSymRef.isInstance(el) && el.unfolded ) open.push(el); });
+          open.forEach(function(el) { el.fold(); });
+        } while ( open.length );
+        this.scene.strips.forEach(function(s) { self.scene.rebuildStrip(s); });
+        if ( this.trace ) this.show(this.step);
+      }
+    },
+    {
+      name: 'toggleGrammar',
+      label: 'edit grammar',
+      buttonStyle: 'LINK',
+      isAvailable: function(allowTypedGrammar) { return allowTypedGrammar; },
+      code: function() { this.grammarShown = ! this.grammarShown; }
+    },
+    {
+      name: 'loadTyped',
+      label: 'Load grammar',
+      isAvailable: function(allowTypedGrammar) { return allowTypedGrammar; },
+      code: function() {
+        try { this.useGrammar(this.compileGrammar(this.grammarText)); }
+        catch (x) { this.status = 'grammar error: ' + ( x.message || x ); }
+      }
+    },
+    {
+      name: 'parse',
+      label: 'Parse',
+      toolTip: 'record the parse of the input, then stand at step 0',
+      isEnabled: function(grammar) { return !! grammar; },
+      code: function() { this.stopPlay(); this.record(0); }
+    },
+    {
+      name: 'stepBack',
+      label: '◀',
+      toolTip: 'one event back',
+      isEnabled: function(trace, step) { return !! trace && step > 0; },
+      code: function() { this.stopPlay(); this.show(this.step - 1); }
+    },
+    {
+      name: 'stepOne',
+      label: '▶',
+      toolTip: 'one event forward',
+      isEnabled: function(grammar) { return !! grammar; },
+      code: function() { this.stopPlay(); if ( ! this.trace ) this.record(0); else this.show(this.step + 1); }
+    },
+    {
+      name: 'stepOver',
+      label: '⏭ over',
+      toolTip: 'skip to the end of the attempt just started',
+      isEnabled: function(grammar) { return !! grammar; },
+      code: function() { this.stopPlay(); if ( ! this.trace ) this.record(0); else this.show(this.trace.stepOverFrom(this.step)); }
+    },
+    {
+      name: 'nextRule',
+      label: '⏭ rule',
+      toolTip: 'skip to the next rule entry',
+      isEnabled: function(grammar) { return !! grammar; },
+      code: function() { this.stopPlay(); if ( ! this.trace ) this.record(0); else this.show(this.trace.nextRuleFrom(this.step)); }
+    },
+    {
+      name: 'togglePlay',
+      label: '▶▶ play',
+      toolTip: 'auto-step; any other button pauses',
+      isEnabled: function(grammar) { return !! grammar; },
+      code: function() {
+        /** Auto-step at a human pace; stops at the end or on any other navigation. Background tabs throttle timers. */
+        if ( this.playTimer_ ) { this.stopPlay(); return; }
+        if ( ! this.trace ) this.record(0);
+        if ( ! this.trace ) return;                                  // no grammar
+        if ( this.step >= this.trace.length() ) this.show(0);
+        var self = this;
+        this.playTimer_ = setInterval(function() {
+          if ( self.step >= self.trace.length() ) { self.stopPlay(); return; }
+          self.show(self.step + 1);
+        }, this.PLAY_INTERVAL_MS);
+        this.playing = true;
+      }
+    },
+    {
+      name: 'runToEnd',
+      label: '⏭⏭ end',
+      toolTip: 'jump to the last event',
+      isEnabled: function(grammar) { return !! grammar; },
+      code: function() { this.stopPlay(); if ( ! this.trace ) this.record(); else this.show(this.trace.length()); }
     }
   ]
 });

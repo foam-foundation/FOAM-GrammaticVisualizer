@@ -33,7 +33,18 @@ foam.CLASS({
     ^probe { outline: 2px solid $foam.parse.rail.RailTheme.trying; outline-offset: -1px; }
     ^died { background: $foam.parse.rail.RailTheme.diedBg; outline: 2px solid $foam.parse.rail.RailTheme.failed; outline-offset: -1px; }
     ^unreached { color: $foam.parse.rail.RailTheme.inkUnreached; }
-    ^rule { border-bottom: 2px solid $foam.parse.rail.RailTheme.matched; }   /* colour overridden per depth */
+    ^rule { border-bottom: 2px solid $foam.parse.rail.RailTheme.matched; }   /* colour set per depth below */
+    ^rule-depth-1 { border-bottom-color: $foam.parse.rail.RailTheme.depth1; }
+    ^rule-depth-2 { border-bottom-color: $foam.parse.rail.RailTheme.depth2; }
+    ^rule-depth-3 { border-bottom-color: $foam.parse.rail.RailTheme.depth3; }
+    ^rule-depth-4 { border-bottom-color: $foam.parse.rail.RailTheme.depth4; }
+    ^rule-depth-5 { border-bottom-color: $foam.parse.rail.RailTheme.depth5; }
+    ^depth-1 { background: $foam.parse.rail.RailTheme.depth1; color: $foam.parse.rail.RailTheme.inkOnDark; }
+    ^depth-2 { background: $foam.parse.rail.RailTheme.depth2; color: $foam.parse.rail.RailTheme.inkOnDark; }
+    ^depth-3 { background: $foam.parse.rail.RailTheme.depth3; color: $foam.parse.rail.RailTheme.inkOnDark; }
+    ^depth-4 { background: $foam.parse.rail.RailTheme.depth4; color: $foam.parse.rail.RailTheme.chipInkDark; }
+    ^depth-5 { background: $foam.parse.rail.RailTheme.depth5; color: $foam.parse.rail.RailTheme.chipInkDark; }
+    ^legend-pending { border: 2px dashed $foam.parse.rail.RailTheme.trying; padding: 0 $space-1; }
     ^pending { border-bottom-style: dashed; border-bottom-color: $foam.parse.rail.RailTheme.trying !important; }
     ^hot { background: $foam.parse.rail.RailTheme.highlightHot; }
     ^at { position: absolute; }
@@ -77,10 +88,10 @@ foam.CLASS({
           .start('b').addClass(this.myClass('unreached')).add(this.LEGEND_UNREACH).end()
           .start('span').add(this.LEGEND_CHIP).end()
           .start('span').addClass(this.myClass('depths'))
-            .forEach(this.DEPTH_PALETTE, function(c, i) { this.start('b').style({ background: c.bg, color: c.fg }).add(i + 1).end(); })
+            .forEach([ 1, 2, 3, 4, 5 ], function(d) { this.start('b').addClass(self.myClass('depth-' + d)).add(d).end(); })
             .add(' ', this.LEGEND_DEPTH)
           .end()
-          .start('span').style({ border: '2px dashed #E69F00', padding: '0 4px' }).add(this.LEGEND_PENDING).end()
+          .start('span').addClass(this.myClass('legend-pending')).add(this.LEGEND_PENDING).end()
         .end()
         .start('div', null, this.body_$).addClass(this.myClass('body')).end();
       this.text$.sub(this.rebuild);
@@ -145,15 +156,15 @@ foam.CLASS({
 
     function openSpan(parent, sp) {
       /** One DOM span for a rule on one line; the logical span remembers every piece so a chip can light all of them. */
-      var el = parent.start('span').addClass(this.myClass('rule')).enableClass(this.myClass('pending'), sp.span.pending)
-        .style({ 'border-bottom-color': this.depthColor(sp.span).bg });
+      var el = parent.start('span').addClass(this.myClass('rule')).addClass(this.myClass('rule-depth-' + this.depthIndex(sp.span)))
+        .enableClass(this.myClass('pending'), sp.span.pending);
       sp.els.push(el);
       return el;
     },
 
-    function depthColor(span) {
-      /** Nesting depth picks the colour so siblings match and a rule inside a rule reads as a step down; the palette cycles. */
-      return this.DEPTH_PALETTE[( Math.max(1, span.depth) - 1 ) % this.DEPTH_PALETTE.length];
+    function depthIndex(span) {
+      /** Nesting depth picks the colour (1..DEPTH_COUNT, cycling) so siblings match and a rule inside a rule reads as a step down. */
+      return ( Math.max(1, span.depth) - 1 ) % this.DEPTH_COUNT + 1;
     },
 
     function placeChips(line) {
@@ -171,8 +182,7 @@ foam.CLASS({
       line.chips.forEach(function(c) {
         var sp = c.sp;
         line.el.start('span').addClass(self.myClass('at')).style({ left: c.col + 'ch', top: ( c.lane * self.LANE_H ) + 'px' })
-          .start('span').addClass(self.myClass('chip')).enableClass(self.myClass('chipPending'), sp.span.pending)
-            .style({ background: self.depthColor(sp.span).bg, color: self.depthColor(sp.span).fg })
+          .start('span').addClass(self.myClass('chip')).addClass(self.myClass('depth-' + self.depthIndex(sp.span))).enableClass(self.myClass('chipPending'), sp.span.pending)
             .add(sp.span.name)
             .on('click', function(e) { e.stopPropagation(); self.onSelect(sp.span.parser); })
             .on('mouseenter', function() { sp.els.forEach(function(el) { el.addClass(self.myClass('hot')); }); })
@@ -187,13 +197,7 @@ foam.CLASS({
     LANE_H: 17,      // px per chip lane above a line
     CHIP_CH: 0.85,   // chip width per name character, in line-font ch units, for lane packing
     CHIP_PAD: 1.6,   // chip padding, in ch
-    DEPTH_PALETTE: [ // Okabe-Ito minus amber, which is the 'still open' state colour
-      { bg: '#0072B2', fg: '#fff' },   // blue
-      { bg: '#D55E00', fg: '#fff' },   // vermillion
-      { bg: '#009E73', fg: '#fff' },   // green
-      { bg: '#CC79A7', fg: '#222' },   // purple
-      { bg: '#56B4E9', fg: '#222' }    // sky
-    ]
+    DEPTH_COUNT: 5   // depth colours in RailTheme (depth1..depth5), cycling
   },
 
   listeners: [

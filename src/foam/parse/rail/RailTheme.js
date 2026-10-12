@@ -113,7 +113,14 @@ foam.CLASS({
     { name: 'outcomeMATCHED', value: '#0072B2', variantKey: 'color', variants: { dark: { value: '#4aa3e0' } } },
     { name: 'outcomeFAILED',  value: '#D55E00', variantKey: 'color', variants: { dark: { value: '#f0813a' } } },
     { name: 'consumedBg',     value: '#d6e8f5', variantKey: 'color', variants: { dark: { value: '#1e3a52' } } },          // ribbon: consumed prefix
-    { name: 'failBg',         value: '#f8d9c4', variantKey: 'color', variants: { dark: { value: '#5a2e1a' } } }           // ribbon: the character the parse died on
+    { name: 'failBg',         value: '#f8d9c4', variantKey: 'color', variants: { dark: { value: '#5a2e1a' } } },          // ribbon: the character the parse died on
+    // Document view: one chip colour per nesting depth, cycling (Okabe-Ito minus amber, the 'still open' colour).
+    { name: 'depth1',         value: '#0072B2' },   // blue
+    { name: 'depth2',         value: '#D55E00' },   // vermillion
+    { name: 'depth3',         value: '#009E73' },   // green
+    { name: 'depth4',         value: '#CC79A7' },   // purple
+    { name: 'depth5',         value: '#56B4E9' },   // sky
+    { name: 'chipInkDark',    value: '#222' }       // text on the two light chips (purple, sky); inkOnDark on the rest
   ],
 
   properties: [
