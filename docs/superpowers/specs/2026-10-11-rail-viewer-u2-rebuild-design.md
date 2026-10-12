@@ -88,6 +88,6 @@ Open:
 - Loading the app directly at `#grammaticVisualizer.grammar` on a fresh page
   shows the nav only; clicking the menu renders it. Not reproduced for Reflow in
   a clean run; to check against another `ViewMenu` before calling it a gap.
-- In one app session a synthetic `input` event on the slider did not move the
-  step while property→slider did; the same event works on the demo page. Not
-  reproduced with a real pointer; to re-check by hand.
+- ~~Slider only moved on release.~~ Resolved: `Input.fromProperty` copied the
+  property's `onKey` (false) over `RangeView`'s live default; the view spec now
+  sets `onKey: true` (gap 14).
