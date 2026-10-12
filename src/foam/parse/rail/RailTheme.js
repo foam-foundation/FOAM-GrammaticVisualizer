@@ -67,13 +67,13 @@ foam.CLASS({
     // tints are the light ones darkened by hand. The standalone demo has no host theme and
     // stays light. The outcome colours are Okabe-Ito (colourblind-safe); MATCHED and FAILED
     // lighten in dark so they keep contrast on #202020.
-    { name: 'ink',            value: '#222',    variantKey: 'color', variants: { dark: { value: '$textDefault' } } },     // body text
-    { name: 'inkSecondary',   value: '#444',    variantKey: 'color', variants: { dark: { value: '$textSecondary' } } },   // headings, legend text
-    { name: 'inkMuted',       value: '#6b6b6b', variantKey: 'color', variants: { dark: { value: '$textTertiary' } } },    // hints, spans, counts
-    { name: 'inkUnreached',   value: '#888',    variantKey: 'color', variants: { dark: { value: '#7a7a7a' } } },          // document text the parse never reached
+    { name: 'ink',            value: '$textDefault' },     // body text
+    { name: 'inkSecondary',   value: '$textSecondary' },   // headings, legend text
+    { name: 'inkMuted',       value: '$textTertiary' },    // hints, spans, counts
+    { name: 'inkUnreached',   value: '$textTertiary' },    // document text the parse never reached
     { name: 'inkOnDark',      value: '#fff' },                                                                            // text on a coloured chip or the tooltip
-    { name: 'line',           value: '#ccc',    variantKey: 'color', variants: { dark: { value: '$borderDefault' } } },   // panel borders
-    { name: 'lineSoft',       value: '#e4e4e4', variantKey: 'color', variants: { dark: { value: '$borderLight' } } },     // section dividers
+    { name: 'line',           value: '$borderDefault' },   // panel borders
+    { name: 'lineSoft',       value: '$borderLight' },     // section dividers
     { name: 'matched',        value: '#0072B2', variantKey: 'color', variants: { dark: { value: '#4aa3e0' } } },          // Outcome MATCHED
     { name: 'trying',         value: '#E69F00' },                                                                         // Outcome TRYING
     { name: 'tryingText',     value: '#B87A00', variantKey: 'color', variants: { dark: { value: '#f0b429' } } },          // TRYING as text: readable on the page colour
@@ -81,19 +81,19 @@ foam.CLASS({
     { name: 'terminalBorder', value: '#d9c98d', variantKey: 'color', variants: { dark: { value: '#8a7a3a' } } },          // edge of a terminal chip (fill is terminalBg)
     { name: 'filterBorder',   value: '#f0d890', variantKey: 'color', variants: { dark: { value: '#8a7a3a' } } },          // edge of the derivation filter bar
     // Surfaces
-    { name: 'page',           value: '#fff',    variantKey: 'color', variants: { dark: { value: '$backgroundDefault' } } },   // viewer background
+    { name: 'page',           value: '$backgroundDefault' },   // viewer background
     { name: 'pageVeil',       value: 'rgba(255,255,255,0.96)', variantKey: 'color', variants: { dark: { value: 'rgba(32,32,32,0.94)' } } },  // legend panel over the canvas
-    { name: 'statusBg',       value: '#fafafa', variantKey: 'color', variants: { dark: { value: '$backgroundSecondary' } } }, // status line
-    { name: 'splitter',       value: '#eee',    variantKey: 'color', variants: { dark: { value: '$backgroundTertiary' } } },  // column splitter
-    { name: 'sceneBg',        value: '#fafafa', variantKey: 'color', variants: { dark: { value: '#262626' } } },          // canvas behind the strips; also the priority-number halo
-    { name: 'ribbonBg',       value: '#fff',    variantKey: 'color', variants: { dark: { value: '$backgroundDefault' } } },   // input ribbon canvas
+    { name: 'statusBg',       value: '$backgroundSecondary' }, // status line
+    { name: 'splitter',       value: '$backgroundTertiary' },  // column splitter
+    { name: 'sceneBg',        value: '$backgroundSecondary' }, // canvas behind the strips; also the priority-number halo
+    { name: 'ribbonBg',       value: '$backgroundDefault' },   // input ribbon canvas
     { name: 'highlightSoft',  value: '#d6e8f5', variantKey: 'color', variants: { dark: { value: '#1e3a52' } } },          // splitter hover; consumed input
     { name: 'highlightHot',   value: '#cfe0f5', variantKey: 'color', variants: { dark: { value: '#27496a' } } },          // the document span the current step is on
-    { name: 'rowHover',       value: '#f1f5fb', variantKey: 'color', variants: { dark: { value: '#2a2f38' } } },          // derivation row under the pointer
-    { name: 'rowSelected',    value: '#e6eefc', variantKey: 'color', variants: { dark: { value: '#243447' } } },          // derivation row that was clicked
-    { name: 'guide',          value: '#d8d8d8', variantKey: 'color', variants: { dark: { value: '#444' } } },             // depth guide lines in the derivation
+    { name: 'rowHover',       value: '$backgroundHover' },     // derivation row under the pointer
+    { name: 'rowSelected',    value: '$primary50', variantKey: 'color', variants: { dark: { value: '#243447' } } },      // derivation row that was clicked
+    { name: 'guide',          value: '$borderLight' },      // depth guide lines in the derivation
     { name: 'leafBg',         value: '#fff7d6', variantKey: 'color', variants: { dark: { value: '#4a4020' } } },          // terminal chip in the derivation (matches terminalBg)
-    { name: 'textChipBg',     value: '#f1f1f1', variantKey: 'color', variants: { dark: { value: '#373737' } } },          // matched-text chip in the derivation
+    { name: 'textChipBg',     value: '$backgroundTertiary' },  // matched-text chip in the derivation
     { name: 'filterBg',       value: '#fff7e0', variantKey: 'color', variants: { dark: { value: '#3d3520' } } },          // derivation filter bar
     { name: 'openBg',         value: '#fff1cc', variantKey: 'color', variants: { dark: { value: '#4a3f14' } } },          // document span of a rule still being tried
     { name: 'diedBg',         value: '#f8d9c4', variantKey: 'color', variants: { dark: { value: '#5a2e1a' } } },          // document span where the parse failed
@@ -101,13 +101,13 @@ foam.CLASS({
     { name: 'tooltipText',    value: '#fff' },
     // Diagram (SVG strips, read through colors below)
     { name: 'track',          value: '#555',    variantKey: 'color', variants: { dark: { value: '#b0b0b0' } } },          // rails between boxes
-    { name: 'text',           value: '#222',    variantKey: 'color', variants: { dark: { value: '$textDefault' } } },     // box labels, rule names, values
-    { name: 'muted',          value: '#666',    variantKey: 'color', variants: { dark: { value: '#a8a8a8' } } },          // badges, counters, frames, priority discs
+    { name: 'text',           value: '$textDefault' },     // box labels, rule names, values
+    { name: 'muted',          value: '$textTertiary' },    // badges, counters, frames, priority discs
     { name: 'terminalBg',     value: '#fff7d6', variantKey: 'color', variants: { dark: { value: '#4a4020' } } },          // terminal box fill
     { name: 'ruleRefBg',      value: '#e8f0ff', variantKey: 'color', variants: { dark: { value: '#243447' } } },          // rule reference box fill
     { name: 'frameBg',        value: 'rgba(232,240,255,0.35)', variantKey: 'color', variants: { dark: { value: 'rgba(36,52,71,0.45)' } } },  // unfolded rule frame
-    { name: 'genericBg',      value: '#e5e5e5', variantKey: 'color', variants: { dark: { value: '#3a3a3a' } } },          // parser with no drawing yet
-    { name: 'gateBg',         value: '#f3f3f3', variantKey: 'color', variants: { dark: { value: '#2e2e2e' } } },          // not/peek gate
+    { name: 'genericBg',      value: '$grey200', variantKey: 'color', variants: { dark: { value: '$neutral700' } } },    // parser with no drawing yet
+    { name: 'gateBg',         value: '$grey100', variantKey: 'color', variants: { dark: { value: '$neutral800' } } },    // not/peek gate
     { name: 'outcomeNONE',    value: '#555',    variantKey: 'color', variants: { dark: { value: '#b0b0b0' } } },
     { name: 'outcomeTRYING',  value: '#E69F00' },
     { name: 'outcomeMATCHED', value: '#0072B2', variantKey: 'color', variants: { dark: { value: '#4aa3e0' } } },

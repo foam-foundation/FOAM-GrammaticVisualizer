@@ -53,7 +53,7 @@ foam.CLASS({
       var dark = this.RailTheme.create(null, variant('dark')), light = this.RailTheme.create(null, variant('light'));
       x.test(dark.resolve('text') !== light.resolve('text') && dark.background !== light.background && dark.resolve('ruleRefBg') !== light.resolve('ruleRefBg'), 'dark variant changes ink, scene background and box fills');
       x.test(/^(#|rgb)/.test(dark.resolve('text')) && /^(#|rgb)/.test(dark.background), 'dark values resolve through the app tokens to colours: ' + dark.resolve('text') + ' ' + dark.background);
-      x.test(light.resolve('text') === '#222' && light.background === '#fafafa', 'light variant is the viewer\'s own light palette');
+      x.test(/^(#|rgb)/.test(light.resolve('text')) && /^(#|rgb)/.test(light.background) && light.resolve('text') !== dark.resolve('text'), 'light variant resolves through foam3 tokens to colours: ' + light.resolve('text') + ' ' + light.background);
       var sw = this.RailTheme.create(null, variant('light')); sw.resolve('text');
       sw.__subContext__.theme.activeVariants.color = 'dark'; sw.refresh();
       x.test(sw.resolve('text') === dark.resolve('text') && sw.background === dark.background, 'refresh() re-reads the colours for the variant now active');

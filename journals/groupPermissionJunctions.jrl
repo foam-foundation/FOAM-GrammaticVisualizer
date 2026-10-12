@@ -39,27 +39,25 @@ p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer"
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.AuthenticatedCSpecDAO"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.read.sentenceDAO"})
 
-// Admin sub-menu container (needed so its children can be reached from the nav)
-p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin"})
-
-// Knowledge Base + all Flows (both browse flowDAO; service.flowDAO granted above)
+// Knowledge Base (top-level in foam3) and this app's own top-level copies of the Admin screens:
+// the basic user gets entries of their own and Admin stays admin-only. Services for each are below.
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.flows"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.countries"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.menus"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.customise-theme"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.theme-all"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.all-views"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.knowledgeBase"})
-p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.flows"})
 
 // All Views (demo page, no DAO)
-p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin.all-views"})
 
 // Countries (countryDAO is globally readable)
-p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin.countries"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.countryDAO"})
 
 // Menus tree
-p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin.menus"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.menuDAO"})
 
 // Themes: Customise Theme (spThemeDAO) and Themes - All (themeDAO)
-p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin.customise-theme"})
-p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.admin.theme-all"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.spThemeDAO"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.themeDAO"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"theme.read.*"})
