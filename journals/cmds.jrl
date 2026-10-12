@@ -1,0 +1,3 @@
+// Console command: a grammar block (code | railroad diagram). Loading this
+// command also registers the <grammar> markdown tag for every flow.
+p({"class":"foam.parse.rail.GrammarCommand","id":"grammar","description":"A foam.parse grammar as code or railroad diagram","icon":"flow"})

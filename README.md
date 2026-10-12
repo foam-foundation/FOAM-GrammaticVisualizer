@@ -40,7 +40,7 @@ Anywhere FOAM renders markdown (a Reflow flow, a knowledge-base document), write
 </grammar>
 ```
 
-The body is the text of a `symbols()` function. The tag shows it as source with a **Code | Diagram** tab; Diagram opens the viewer on it. `input="…"` gives the text to parse; `input-from="blockName"` takes it from another block of the flow for long inputs.
+The body is the text of a `symbols()` function. The tag shows it as source with a **Code | Diagram** tab; Diagram opens the viewer on it. `input="…"` gives the text to parse; `input-from="blockName"` takes it from another block of the flow for long inputs. In the Reflow console, `/grammar <symbols text>` adds the same thing as a block of its own; that command is also what registers the tag when the console starts.
 
 ### Use the viewer in a FOAM app
 

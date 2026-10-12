@@ -104,3 +104,8 @@ Open:
   preview (`TextPreview`, `GridPreview`, `PdfPreview`) that takes spans in its own
   coordinates. `ParseTrace`, the scene and the derivation panel stay as they are.
   CSV is text and already works.
+- **`input-from` in a static flow:** in the sample flow the `pairs` Script block
+  showed only its name and the second `<grammar>` resolved an empty input; the
+  unit test covers `input-from` against a populated scope. To check whether a
+  Script block's value is in scope before its autoRun completes, or at all in
+  static mode.
