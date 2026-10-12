@@ -23,11 +23,11 @@ foam.CLASS({
   requires: [ 'foam.parse.rail.RailTheme' ],
 
   css: `
-    ^ { display: flex; flex-direction: column; min-height: 0; font-size: 13px; font-family: sans-serif; color: $foam.parse.rail.RailTheme.ink; }
-    ^legend { flex: none; display: flex; flex-wrap: wrap; gap: 3px 10px; align-items: baseline; padding: 4px 8px; font-size: 12px; color: $foam.parse.rail.RailTheme.inkSecondary; border-bottom: 1px solid $foam.parse.rail.RailTheme.lineSoft; }
-    ^legend b { font-weight: normal; padding: 0 3px; }
-    ^body { flex: 1; min-height: 0; overflow: auto; padding: 4px 8px 8px; }
-    ^line { position: relative; font-size: 13px; line-height: 1.5; font-family: monospace; white-space: pre; color: $foam.parse.rail.RailTheme.ink; min-height: 1.5em; }
+    ^ { display: flex; flex-direction: column; min-height: 0; font-size: 1.3rem; color: $foam.parse.rail.RailTheme.ink; }
+    ^legend { flex: none; display: flex; flex-wrap: wrap; gap: 0.3rem $space-2_5; align-items: baseline; padding: $space-1 $space-2; font-size: $header-xxxs; color: $foam.parse.rail.RailTheme.inkSecondary; border-bottom: 1px solid $foam.parse.rail.RailTheme.lineSoft; }
+    ^legend b { font-weight: $font-normal; padding: 0 0.3rem; }
+    ^body { flex: 1; min-height: 0; overflow: auto; padding: $space-1 $space-2 $space-2; }
+    ^line { position: relative; font-size: 1.3rem; line-height: 1.5; font-family: monospace; white-space: pre; color: $foam.parse.rail.RailTheme.ink; min-height: 1.5em; }
     ^consumed { background: $foam.parse.rail.RailTheme.highlightSoft; }
     ^open { background: $foam.parse.rail.RailTheme.openBg; }
     ^probe { outline: 2px solid $foam.parse.rail.RailTheme.trying; outline-offset: -1px; }
@@ -48,11 +48,11 @@ foam.CLASS({
     ^pending { border-bottom-style: dashed; border-bottom-color: $foam.parse.rail.RailTheme.trying !important; }
     ^hot { background: $foam.parse.rail.RailTheme.highlightHot; }
     ^at { position: absolute; }
-    ^chip { display: inline-block; font-size: 11px; line-height: 1.2; font-family: sans-serif; color: $foam.parse.rail.RailTheme.inkOnDark; background: $foam.parse.rail.RailTheme.matched; border-radius: 3px; padding: 1px 5px; cursor: pointer; white-space: nowrap; border: 2px solid transparent; }
+    ^chip { display: inline-block; font-size: 1.1rem; line-height: 1.2; color: $foam.parse.rail.RailTheme.inkOnDark; background: $foam.parse.rail.RailTheme.matched; border-radius: 0.3rem; padding: $space-px 0.5rem; cursor: pointer; white-space: nowrap; border: 2px solid transparent; }
     ^chip:hover { outline: 2px solid $foam.parse.rail.RailTheme.ink; }
     ^chipPending { border: 2px dashed $foam.parse.rail.RailTheme.trying; }
-    ^depths b { color: $foam.parse.rail.RailTheme.inkOnDark; padding: 0 5px; border-radius: 3px; margin-right: 2px; }
-    ^empty { color: $foam.parse.rail.RailTheme.inkMuted; padding: 4px 8px; }
+    ^depths b { color: $foam.parse.rail.RailTheme.inkOnDark; padding: 0 0.5rem; border-radius: 0.3rem; margin-right: $space-0_5; }
+    ^empty { color: $foam.parse.rail.RailTheme.inkMuted; padding: $space-1 $space-2; }
   `,
 
   messages: [

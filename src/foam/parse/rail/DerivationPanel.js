@@ -18,30 +18,30 @@ foam.CLASS({
   `,
 
   css: `
-    ^ { font-size: 12px; font-family: sans-serif; color: $foam.parse.rail.RailTheme.ink; }
-    ^title { font-weight: bold; color: $foam.parse.rail.RailTheme.inkSecondary; padding: 0 8px 4px; }
-    ^sub { color: $foam.parse.rail.RailTheme.inkMuted; font-size: 11px; padding: 0 8px 8px; }
-    ^row { display: grid; grid-template-columns: auto 16px minmax(0, 1fr) 62px auto; align-items: baseline;
-           gap: 0 6px; padding: 2px 8px 2px 6px; cursor: pointer; border-left: 3px solid transparent; }
+    ^ { font-size: $header-xxxs; color: $foam.parse.rail.RailTheme.ink; }
+    ^title { font-weight: $font-bold; color: $foam.parse.rail.RailTheme.inkSecondary; padding: 0 $space-2 $space-1; }
+    ^sub { color: $foam.parse.rail.RailTheme.inkMuted; font-size: 1.1rem; padding: 0 $space-2 $space-2; }
+    ^row { display: grid; grid-template-columns: auto $space-4 minmax(0, 1fr) 6.2rem auto; align-items: baseline;
+           gap: 0 $space-1_5; padding: $space-0_5 $space-2 $space-0_5 $space-1_5; cursor: pointer; border-left: 3px solid transparent; }
     ^row:hover { background: $foam.parse.rail.RailTheme.rowHover; }
     ^row:hover ^locate { visibility: visible; }
     ^selected { background: $foam.parse.rail.RailTheme.rowSelected; border-left-color: $foam.parse.rail.RailTheme.matched; }
-    ^guides { height: 1.4em; background: repeating-linear-gradient(to right, $foam.parse.rail.RailTheme.guide 0 1px, transparent 1px 14px); }
+    ^guides { height: 1.4em; background: repeating-linear-gradient(to right, $foam.parse.rail.RailTheme.guide 0 1px, transparent 1px 1.4rem); }
     ^glyph { text-align: center; }
     ^rule { font-weight: $font-medium; }
     ^rule, ^leaf { justify-self: start; }
-    ^leaf { font-family: monospace; color: $foam.parse.rail.RailTheme.ink; background: $foam.parse.rail.RailTheme.leafBg; border: 1px solid $foam.parse.rail.RailTheme.terminalBorder; border-radius: 9px; padding: 0 7px; line-height: 1.4; }
+    ^leaf { font-family: monospace; color: $foam.parse.rail.RailTheme.ink; background: $foam.parse.rail.RailTheme.leafBg; border: 1px solid $foam.parse.rail.RailTheme.terminalBorder; border-radius: 0.9rem; padding: 0 0.7rem; line-height: 1.4; }
     ^pending ^leaf { border-color: $foam.parse.rail.RailTheme.trying; }
-    ^span { font-size: 11px; font-family: monospace; color: $foam.parse.rail.RailTheme.inkMuted; text-align: right; white-space: nowrap; }
-    ^text { display: inline-block; vertical-align: bottom; font-size: 11px; font-family: monospace; color: $foam.parse.rail.RailTheme.inkSecondary; background: $foam.parse.rail.RailTheme.textChipBg; border-radius: 3px; padding: 0 4px; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
-    ^count { font-size: 10px; color: $foam.parse.rail.RailTheme.inkMuted; margin-left: 4px; }
-    ^locate { visibility: hidden; color: $foam.parse.rail.RailTheme.matched; font-size: 11px; margin-left: 6px; }
+    ^span { font-size: 1.1rem; font-family: monospace; color: $foam.parse.rail.RailTheme.inkMuted; text-align: right; white-space: nowrap; }
+    ^text { display: inline-block; vertical-align: bottom; font-size: 1.1rem; font-family: monospace; color: $foam.parse.rail.RailTheme.inkSecondary; background: $foam.parse.rail.RailTheme.textChipBg; border-radius: 0.3rem; padding: 0 $space-1; white-space: nowrap; max-width: 16rem; overflow: hidden; text-overflow: ellipsis; }
+    ^count { font-size: 1rem; color: $foam.parse.rail.RailTheme.inkMuted; margin-left: $space-1; }
+    ^locate { visibility: hidden; color: $foam.parse.rail.RailTheme.matched; font-size: 1.1rem; margin-left: $space-1_5; }
     ^pending { color: $foam.parse.rail.RailTheme.trying; }
     ^pending ^rule { color: $foam.parse.rail.RailTheme.tryingText; }
     ^matched ^glyph { color: $foam.parse.rail.RailTheme.matched; }
-    ^empty { color: $foam.parse.rail.RailTheme.inkMuted; padding: 4px 8px; }
-    ^filter { background: $foam.parse.rail.RailTheme.filterBg; border-bottom: 1px solid $foam.parse.rail.RailTheme.filterBorder; padding: 4px 8px; margin-bottom: 4px; }
-    ^clear { color: $foam.parse.rail.RailTheme.matched; cursor: pointer; margin-left: 8px; text-decoration: underline; }
+    ^empty { color: $foam.parse.rail.RailTheme.inkMuted; padding: $space-1 $space-2; }
+    ^filter { background: $foam.parse.rail.RailTheme.filterBg; border-bottom: 1px solid $foam.parse.rail.RailTheme.filterBorder; padding: $space-1 $space-2; margin-bottom: $space-1; }
+    ^clear { color: $foam.parse.rail.RailTheme.matched; cursor: pointer; margin-left: $space-2; text-decoration: underline; }
   `,
 
   messages: [
@@ -79,7 +79,7 @@ foam.CLASS({
         .addClass(this.myClass(r.pending ? 'pending' : 'matched'))
         .enableClass(this.myClass('selected'), r.parser === this.selectedParser_)
         .on('click', function() { self.selectedParser_ = r.parser; self.onSelect(r.parser); self.rebuild(); });
-      row.start('span').addClass(this.myClass('guides')).style({ width: ( r.depth * 14 ) + 'px' }).end();
+      row.start('span').addClass(this.myClass('guides')).style({ width: ( r.depth * 1.4 ) + 'rem' }).end();
       row.start('span').addClass(this.myClass('glyph')).add(r.pending ? '▶' : '✓').end();
       row.start('span').addClass(this.myClass(r.kind === 'leaf' ? 'leaf' : 'rule')).add(r.label)
         .callIf(r.count > 1, function() { this.start('span').addClass(self.myClass('count')).add('×' + r.count + ( r.recursing ? ' ' + self.RECURSING : '' )).end(); })
