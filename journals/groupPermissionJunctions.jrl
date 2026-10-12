@@ -66,3 +66,9 @@ p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer"
 
 // Grammar Visualizer screen
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.grammar"})
+
+// Flows (and any other ServiceProviderAware rows) with no spid of their own need
+// serviceprovider.read.* to be visible; foam3's 176 shipped flows carry none
+// (ServiceProviderAwareSupport.js:315). The remaining ones carry spid "foam".
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"serviceprovider.read.*"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"serviceprovider.read.foam"})
