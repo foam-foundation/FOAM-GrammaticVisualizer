@@ -116,6 +116,7 @@ foam.CLASS({
     ^bar { display: flex; flex-wrap: wrap; gap: $space-1_5 $space-2_5; align-items: center; padding: $space-1_5 $space-2; border-bottom: 1px solid $foam.parse.rail.RailTheme.line; flex: none; }
     ^title { margin-right: $space-1_5; }
     ^check { display: inline-flex; align-items: center; gap: $space-1; }
+    ^bar .foam-u2-TextField { flex: 0 1 18rem; width: auto; }
     ^main { flex: 1; min-height: 0; display: flex; }
     ^left { flex: 1; min-width: 0; position: relative; }
     ^host { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
@@ -146,9 +147,10 @@ foam.CLASS({
     ^row > .foam-u2-ActionView { flex: none; }
     ^gram textarea { width: 100%; box-sizing: border-box; font-family: monospace; margin: $space-1_5 0 $space-1; }
     ^input textarea { width: 100%; box-sizing: border-box; font-family: monospace; resize: vertical; }
-    ^transport { display: flex; gap: $space-1; margin: $space-1_5 0 $space-1; }
-    ^transport > * { flex: 1; min-width: 0; }
-    ^slider input { width: 100%; margin: 0; }
+    ^transport { display: flex; flex-wrap: wrap; gap: $space-1; margin: $space-1_5 0 $space-1; }
+    ^transport > * { flex: 1; white-space: nowrap; }
+    /* The app's text-input CSS sizes every <input>; a range needs the native control back. */
+    ^slider input[type=range] { width: 100%; height: auto; margin: 0; padding: 0; border: none; background: none; appearance: auto; }
     ^ribbon { flex: none; overflow: hidden; border-bottom: 1px solid $foam.parse.rail.RailTheme.lineSoft; }
     ^doc { flex: 1 1 45%; min-height: 0; display: flex; flex-direction: column; border-bottom: 1px solid $foam.parse.rail.RailTheme.line; }
     ^docToggle { margin-left: auto; white-space: nowrap; }
@@ -318,9 +320,11 @@ foam.CLASS({
       }
     },
 
-    function check(e, prop, label) {
+    function check(e, prop, label, opt_class) {
       /** A checkbox bound to a Boolean property of this view. The CheckBox puts its label beside itself in the parent, so each gets a span of its own. */
-      return e.start('span').addClass(this.myClass('check')).start(prop, { label$: foam.lang.Slot.isInstance(label) ? label : foam.lang.ConstantSlot.create({ value: label }) }).end().end();
+      return e.start('span').addClass(this.myClass('check')).addClass(opt_class || '')
+        .start(prop, { label$: foam.lang.Slot.isInstance(label) ? label : foam.lang.ConstantSlot.create({ value: label }) }).end()
+      .end();
     },
 
     function renderBar(e) {
@@ -428,7 +432,7 @@ foam.CLASS({
           .start('div').addClass(this.myClass('slider'))
             .start(this.STEP, { maxValue$: this.traceLength$ }).attrs({ title: this.SLIDER_HINT }).end()
           .end()
-          .call(function() { self.check(this, self.DOCUMENT_SHOWN, self.DOC_TOGGLE).addClass(self.myClass('docToggle')); })
+          .call(function() { self.check(this, self.DOCUMENT_SHOWN, self.DOC_TOGGLE, self.myClass('docToggle')); })
         .end()
         .start('div', null, this.ribbonEl$).addClass(this.myClass('ribbon')).hide(this.documentShown$).add(this.ribbon).end()
         .start('div').addClass(this.myClass('doc')).show(this.documentShown$).add(this.doc).end()
