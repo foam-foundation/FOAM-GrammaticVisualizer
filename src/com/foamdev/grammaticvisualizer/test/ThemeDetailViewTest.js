@@ -40,6 +40,9 @@ foam.CLASS({
       await dao.put(this.CSSTokenOverride.create({ theme: 't1', source: 'primary500', target: '#123456', variants: { dark: '#abcdef' } }, y));
       await dao.put(this.CSSTokenOverride.create({ theme: 'other', source: 'primary500', target: '#000000' }, y));
 
+      // The tabs must render once: count foam's "detached parent" warnings while the view settles.
+      var detached = 0, origWarn = console.warn;
+      console.warn = function(m) { if ( /detached parent/.test(String(m)) ) detached++; origWarn.apply(console, arguments); };
       var v = this.ThemeDetailView.create({ data: theme, of: this.Theme }, y);
       v.write();
       var root = v.element_;
@@ -52,6 +55,9 @@ foam.CLASS({
         await until(readyFn);
       };
       x.test(!! root.querySelector('.foam-u2-SegmentedTabs'), 'sections render as segmented tabs');
+      await wait(300);
+      console.warn = origWarn;
+      x.test(detached === 0, 'the tabs render once, nothing is added to a detached tree: ' + detached);
       x.test(tabLabels.indexOf('Legacy CSS') >= 0 && tabLabels.indexOf('CSS tokens') === tabLabels.indexOf('Legacy CSS') + 1 && tabLabels.indexOf('Icons / Images') >= 0 && tabLabels.indexOf('Inputs') >= 0, 'one tab per Theme section: ' + tabLabels.join(', '));
 
       // Colours: a card per colour field, the swatch carries the value, unset ones say so.

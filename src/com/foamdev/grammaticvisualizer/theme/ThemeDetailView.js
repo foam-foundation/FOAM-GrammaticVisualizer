@@ -90,6 +90,26 @@ foam.CLASS({
     }
   ],
 
+  listeners: [
+    {
+      name: 'updateVis',
+      documentation: `
+        TabbedDetailView merges this with a 100ms delay, so its first render uses an
+        empty visibility list (every section), then renders again once the list
+        arrives. The first tree is thrown away while async views in it (FObjectView
+        for appConfig awaits its choices) are still rendering, which logs forty
+        "add child to detached parent" warnings and, on Edit, throws from
+        FObjectView.render. Theme's sections resolve synchronously, so apply the
+        list at once and render only once.
+      `,
+      code: function() {
+        if ( ! foam.util.equals(this.stableVisibilities_, this.visibilityArray_) ) {
+          this.stableVisibilities_ = this.visibilityArray_;
+        }
+      }
+    }
+  ],
+
   methods: [
     function navigationHelp() {
       return {
