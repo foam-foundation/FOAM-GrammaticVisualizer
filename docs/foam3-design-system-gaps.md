@@ -39,3 +39,67 @@ but outside the design system), **paper cut** (cost time, not design).
   dark on a dark Mac. Tests must create explicit light/dark sub-contexts.
 - **Workaround:** `x.createSubContext({ theme: { activeVariants: { color: 'light' } } })`.
 - **Severity:** paper cut; worth a line in the testing guide.
+
+## 4. No resizable split pane
+
+- **Needed:** two columns with a draggable divider (canvas | trace panel).
+- **foam3:** `foam.u2.borders.SplitScreenBorder` is a fixed 55vw / 43vw full-page
+  layout (`height: 100vh; width: 100vw`), no drag, no slot for a divider.
+  `SplitScreenGridBorder` is a grid, also fixed.
+- **Workaround:** the viewer keeps its own 7px splitter div with pointer maths
+  and a `rightWidth` property.
+- **Severity:** workaround. A `SplitBorder` with `ratio$` and a drag handle
+  would serve every two-pane screen (Reflow's console has the same need).
+
+## 5. A text field has no Enter / submit hook
+
+- **Needed:** "find rule, Enter goes to the first match"; "class id, Enter loads".
+- **foam3:** `foam.u2.TextField` / `tag/Input.js` listen to `change` or `input`
+  only. An Action's `keyboardShortcuts` registers on the whole view, so `enter`
+  there would also fire from the input textarea.
+- **Workaround:** `.start(this.FIND_TEXT).on('keydown', …)` on the field.
+- **Severity:** paper cut. An `onEnter` / `submitAction` on `Input` (or a
+  `keyboardShortcuts` scope of "when this view has focus") would remove the raw
+  DOM listener.
+
+## 6. CheckBox renders its label beside itself, in the parent
+
+- **Needed:** a labelled checkbox in a toolbar row.
+- **foam3:** `foam.u2.CheckBox` appends its `<label>` to `parentNode`
+  (`CheckBox.js:90-100`), so two checkboxes in one flex row interleave inputs and
+  labels, and a flex `gap` on the row separates a box from its own label. The
+  Boolean property default view also takes `placeholder`, not `label`, as the
+  label text (`Element2.js:2093-2101`).
+- **Workaround:** each checkbox in its own `span` (`^check`), label passed as
+  `label$` at the call site.
+- **Severity:** paper cut. A checkbox that owns its label (one `<label>` wrapping
+  the input) would need no wrapper.
+
+## 7. Layout primitives carry no spacing tokens
+
+- **Needed:** a toolbar row and a button row with a consistent gap.
+- **foam3:** `$space-*` tokens exist (`CSSTokens.js:319-340`), but
+  `foam.u2.layout.Rows` / `Cols` have no gap at all and `foam.u2.layout.Layout`
+  takes `gap` as a pixel integer. `ButtonGroup` hard-codes `gap: 1rem`.
+- **Workaround:** the viewer's own `^bar` / `^row` / `^transport` classes with
+  `gap: $space-1_5`.
+- **Severity:** paper cut. `Rows`/`Cols` taking a `$space-*` token (or
+  `Layout.gap` accepting a token) would make the view's layout CSS disappear.
+
+## 8. No monospace / code font token
+
+- **Needed:** the input, status line and grammar editor are code.
+- **foam3:** `$font1` is the UI face; there is no `$fontMono` and no Fonts.js
+  class for code. `CSSAuditTest` accepts the literal `font-family: monospace`.
+- **Workaround:** literal `monospace`.
+- **Severity:** paper cut; a themeable code face is a one-token addition.
+
+## 9. An action's label lives apart from the view's messages
+
+- **Needed:** one place for every user string.
+- **foam3:** `messages:` on the view and `label:` / `toolTip:` on each Action
+  are separate axioms, both translated. The old chrome had messages for button
+  text; the actions now carry it, so the messages were deleted — but a label
+  that changes at runtime (play / pause) still needs a message beside the action.
+- **Workaround:** `label$` slot at the call site mapping to a message.
+- **Severity:** paper cut; documentation more than design.
