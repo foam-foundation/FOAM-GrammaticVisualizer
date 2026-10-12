@@ -16,10 +16,12 @@ foam.CLASS({
        legacy CSS macros (/*%PRIMARY1%*/) that ApplicationController expands;
        views written with $tokens never read them.
     2. the theme's CSSTokenOverride rows, the mechanism that actually re-colours
-       token-based views per theme (TokenOverridesView).
+       token-based views per theme (TokenOverridesView), and under them the
+       catalogue of base tokens to pick from (TokenCatalogueView).
   `,
 
   requires: [
+    'com.foamdev.grammaticvisualizer.theme.TokenCatalogueView',
     'com.foamdev.grammaticvisualizer.theme.TokenOverridesView',
     'foam.u2.ControllerMode'
   ],
@@ -28,7 +30,8 @@ foam.CLASS({
     { name: 'LEGACY_TITLE', message: 'Legacy CSS macros' },
     { name: 'LEGACY_HELP', message: 'These fields fill /*%PRIMARY1%*/-style macros in old CSS. Views built on $tokens ignore them; use the token overrides below for those.' },
     { name: 'UNSET', message: 'unset' },
-    { name: 'TOKENS_TITLE', message: 'Token overrides' }
+    { name: 'TOKENS_TITLE', message: 'Token overrides' },
+    { name: 'CATALOGUE_TITLE', message: 'Token catalogue' }
   ],
 
   css: `
@@ -91,9 +94,18 @@ foam.CLASS({
             .end();
           });
         }))
-        .start().addClass('h500').add(this.TOKENS_TITLE).end()
         .add(this.slot(function(data) {
-          return data && self.TokenOverridesView.create({ themeId: data.id }, self);
+          if ( ! data ) return;
+          var overrides = self.TokenOverridesView.create({ themeId: data.id }, self);
+          var catalogue = self.TokenCatalogueView.create({
+            theme: data,
+            onPick: function(name, light, dark) { overrides.copyFrom({ source: name, light: light, dark: dark }); }
+          }, self);
+          return this.E()
+            .start().addClass('h500').add(self.TOKENS_TITLE).end()
+            .add(overrides)
+            .start().addClass('h500').add(self.CATALOGUE_TITLE).end()
+            .add(catalogue);
         }));
     },
 
