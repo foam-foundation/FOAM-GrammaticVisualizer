@@ -111,3 +111,17 @@ Open:
   unit test covers `input-from` against a populated scope. To check whether a
   Script block's value is in scope before its autoRun completes, or at all in
   static mode.
+- **Theme screens + a themes guide (next up, noted 2026-10-12).** `#grammaticVisualizer.theme-all`
+  (foam3's raw `Theme` detail): Colours tab shows names with empty swatches (the
+  app's theme sets no `primary1..5`; those fields feed the legacy `/*%PRIMARY1%*/`
+  CSS macros, not `$tokens`), Icons/Images render at natural size (`ImageView` has
+  no bounds; the Customise Theme screen's `ThemeImageUploadView` caps at 50%),
+  Navigation is three raw strings (class names / a JSON view spec), Inputs is
+  three strings (`inputHeight`, `inputVerticalPadding`, `inputHorizontalPadding`)
+  that become `$inputHeight` etc. via the same macro pass. Real theming is
+  `cssTokens` (261 base in `CSSTokens.js` + per-class) overridden per theme through
+  `cssTokenOverrideDAO` (`CSSTokenOverride`), which has no menu or editor in foam3.
+  Plan: analyse first, then a `doc/guides/Themes.md` (Theme model vs tokens vs
+  overrides vs variants) and screen fixes (swatches, image bounds, token
+  override editor). No dedicated themes guide exists today; `doc/fbe/CSSTokens.md`
+  covers tokens only.
