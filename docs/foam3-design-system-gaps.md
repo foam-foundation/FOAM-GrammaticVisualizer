@@ -25,6 +25,7 @@ design system · 🟡 paper cut — cost time, not design.
 | 12 | Dark mode reaches a page with no theme (observation) | ✅ | Docs |
 | 13 | No overflow / "More" container that can hold property views | 🟡 | `OverlayActionListView` accepting any view |
 | 14 | A property's `onKey` silently overrides `RangeView`'s live default | 🟡 | `fromProperty` keeps a view-class default |
+| 15 | `TextArea` needs a hand-picked `rows`; no content sizing (suggestion) | 🟡 | `field-sizing: content` + `max-height` by default |
 
 ---
 
@@ -123,3 +124,10 @@ design system · 🟡 paper cut — cost time, not design.
 **foam3** · `RangeView` declares `onKey: true` (`RangeView.js:35`), but `Input.fromProperty` tests `this.hasOwnProperty('onKey')` — a class default is not an own value — and copies the property's `onKey` (false) over it (`tag/Input.js:192-193`). The slider then updates on release only, with nothing to say why.
 **Did** · `view: { class: 'foam.u2.RangeView', onKey: true }` on the property.
 **Fix** · `fromProperty` should defer to a value the view class sets, or `RangeView` should bind `input` unconditionally (a range has no "typing").
+
+## 15. `TextArea` needs a hand-picked `rows` (suggestion) 🟡
+
+**Needed** · an input box that fits one line of input or a pasted paragraph; a grammar editor that fits the grammar.
+**foam3** · `foam.u2.tag.TextArea` sizes by `rows` (default 4), set once at render.
+**Did** · `field-sizing: content` with a `max-height` on the viewer's two textareas; `rows` stays the floor for Firefox/Safari.
+**Fix** · ship `field-sizing: content; max-height` in `TextArea`'s own CSS so no form has to pick a row count.
