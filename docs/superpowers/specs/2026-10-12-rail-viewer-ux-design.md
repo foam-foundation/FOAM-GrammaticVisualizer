@@ -37,9 +37,20 @@ information scent, Fitts, Hick, Gestalt proximity, system status.
 - After editing the input: status "input changed — press Parse" (already), and the `parse` button pulses once (`^attention` class toggled by a `needsParse` Boolean; no colour literal, uses `$primary*`).
 - Message names change accordingly; `START`/"Start" wording is gone everywhere.
 
-## Not changing
+### 4. Canvas signifiers (pass 2, pulled in)
 
-Canvas signifiers (cursor, unfold chevrons, zoom control) and legibility — pass 2.
+- `+` / `−` zoom actions beside Fit width / Fit all, so zooming is visible, not only a wheel gesture.
+- A rule-reference box thickens its stroke on hover (`[data-rail]:hover > .box.ruleref`), so a clickable box reads as clickable before the click. The cursor was already a pointer.
+
+### 5. Legibility (pass 2, pulled in)
+
+- Canvas text one step up in `RailTheme.fonts`: labels 13 → 14px, rule names 13 → 14px, glyphs 11 → 12px, values 9 → 10px.
+- `muted` ink darker in light (`#666`) and lighter in dark (`#a8a8a8`) for contrast.
+
+## Deviations while implementing
+
+- `More` and `other sources` are text-style toggle actions revealing a second row (`show()`), not an overlay menu: `OverlayActionListView` hosts actions only, and the hidden set is mostly property views (checkboxes). Logged as gap 13.
+- Parse is its own full-width primary row above a six-button transport, rather than seven in one row: at 440px seven never fit without wrapping, and a wrap put `end` on a row of its own.
 
 ## Verification
 
