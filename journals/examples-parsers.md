@@ -30,7 +30,6 @@ Parsers can be used for many things, including:
 FOAM parsers accept input in the form of objects which implement the PStream interface.
 PStream is short for "Parser Stream".
 
-
 PStreams have the following interface:
     get int     pos   - The character position in the input stream.
 
@@ -59,11 +58,9 @@ is stored in the .value property of the returned PStream.
 First we'll start off by explaining the "simple" parsers. Simple parsers do not combine
 any other parsers, they do all of their parsing on their own.
 
-
 ## foam.parse.Parsers
 We use the foam.parse.Parsers Singleton class which provides convenience constructors
 for the various parser types.
-
 
 ## Literal Parser
 The simplest parser is a literal parser, which only parses the supplied string.
@@ -94,14 +91,14 @@ log(!np?'undefined':np.toString());
 
 // Here we'll create an in-lined literal 'def' parser and then call in directly.
 log(P.literal('def').parse(ps).toString());</example>
-Every parser below is also drawn as a railroad diagram: switch its tab to **Diagram** and press **Parse** to watch it run on the input.
+Every parser below comes as a block with three tabs: **Examples** runs it over sample inputs (click a row to see that parse in the diagram), **Code** is the grammar as a `symbols()` body you can edit, and **Diagram** draws it as a railroad and steps through the parse.
 
-<grammar input="abcdef">
+<grammar inputs="abc|abcdef|xyz" input="abcdef">
 { START: literal('abc') }
 </grammar>
 
-
 ## Parser Tester
+The blocks above and below show their examples in an **Examples** tab. The remaining `<example>` snippets, which show the JavaScript API itself, use a small helper instead:
 Before continuing, let's write a helper function testP() to make demonstrating parser examples easier.
 
 The testP() function uses the U2 GUI library to create a table of input output pairs.
@@ -177,78 +174,51 @@ log(P.stringPStream('abc').toString());</example>
 The literalIC() parser is like literal(), that we saw earlier, but it performs a
 case-insensitive match.
 Notice that it also parses 'Abc' and 'ABC', whereas the literal() didn't.
-<example>
-testP(P.literalIC('abc'), [ 'abc', 'abcdef', 'Abc', 'ABC', 'xyz' ]);</example>
 
-<grammar input="Abc">
+<grammar inputs="abc|abcdef|Abc|ABC|xyz" input="Abc">
 { START: literalIC('abc') }
 </grammar>
-
 
 ## Any Char
 The anyChar() parser is the most indiscriminating parser. It will parse any one character.
 Notice that the only case where it fails to parse is when given an empty input.
-<example>
-testP(P.anyChar(), [ 'abc', 'ABC', '!@#$%', '' ]);</example>
 
-<grammar input="abc">
+<grammar inputs="abc|ABC|!@#$%|" input="abc">
 { START: anyChar() }
 </grammar>
-
 
 ## EOF
 EOF is a standard acronym for End Of File, but more generally it means the end of
 any input source.
 It is, in a way, the oppose of the anyChar() parser, since it won't parse any character
 except the EOF.
-<example>
-testP(P.eof(), [ 'abc', 'ABC', '!@#$%', '' ]);</example>
 
-<grammar input="abc">
+<grammar inputs="abc|" input="abc">
 { START: seq(literal('abc'), eof()) }
 </grammar>
-
 
 ## Chars Parser
 The chars() parser will parse any single character which is included as part of the
 supplied string.
-<example>
-testP(P.chars('abc'), [ 'ax', 'bx', 'cx', 'xb', '' ]);</example>
 
-<grammar input="ax">
+<grammar inputs="ax|bx|cx|xb|" input="ax">
 { START: chars('abc') }
 </grammar>
-
 
 ## Not Chars Parser
 The notChars() parser will parse any single character which is NOT included as part of the
 supplied string. However, it will not parse EOF.
-<example>
-testP(P.notChars('abc'), [ 'ax', 'bx', 'cx', 'xb', '' ]);</example>
 
-<grammar input="xb">
+<grammar inputs="ax|bx|cx|xb|" input="xb">
 { START: notChars('abc') }
 </grammar>
 
-
 ## Range Parser
 The range() parser is similar to chars(), except that it lets you more easily specify a range of characters.
-<example>
-testP(P.range('0', '9'), [ 'a', '1', '2', '3', '9', 'z' ]);
 
-// Is short form for:
-testP(P.chars('0123456789'), [ 'a', '1', '2', '3', '9', 'z' ]);
-
-// It is often used to detect numbers (like above) or letters, like:
-testP(P.range('a', 'z'), [ 'a', '1', '2', '3', '9', 'z' ]);
-
-// Notice that it still only matches a single character
-testP(P.range('a', 'z'), [ 'abc', '123' ]);</example>
-
-<grammar input="7">
+<grammar inputs="a|1|2|3|9|z" input="7">
 { START: range('0', '9') }
 </grammar>
-
 
 ## Combinators
 The above parsers are all simple parsers. They all parse a single character or a literal string.
@@ -262,15 +232,10 @@ in sequence. Each parser picks up where the previous parser left off in the inpu
 The sequence parser will fail if any of the composed parsers fails to parse.
 On a successful parse, the returned value is an array of the parsed values of each
 composed parser.
-<example>
-// The first parser accepts a letter and the second parser accepts a number.
-var p = P.seq(P.range('a','z'), P.range('0','9'));
-testP(p, [ 'r2', 'd2', '3p', 'xy' ]);</example>
 
-<grammar input="r2">
+<grammar inputs="r2|d2|3p|xy" input="r2">
 { START: seq(range('a', 'z'), range('0', '9')) }
 </grammar>
-
 
 ## Literal Parser Shortcut
 In the example below, notice that we have three calls to P.literal(). Since P.literal() is so
@@ -294,15 +259,10 @@ To facilitate this, we use a very simple combinator parser called str() that dec
 Instead of changing that delegate parser's behaviour, it just
 changes its resulting value so that if it returns an array, it converts it into a single
 string value with the array values concatenated.
-<example>
-// Notice unlike above, our results are strings, not arrays
-var p = P.seq(P.range('a','z'), P.range('0','9'));
-testP(P.str(p), [ 'r2', 'd2', '3p', 'xy' ]);</example>
 
-<grammar input="r2">
+<grammar inputs="r2|d2|3p|xy" input="r2">
 { START: str(seq(range('a', 'z'), range('0', '9'))) }
 </grammar>
-
 
 ## Substring Parser
 <pre>
@@ -344,7 +304,7 @@ testP(P.substring(sentence), input);
 var   word       = P.plus(P.range('a','z'));
 testP(P.substring(sentence), input);</example>
 
-<grammar input="abc   def   xyz">
+<grammar inputs="abc|abc def|abc   def   xyz" input="abc   def   xyz">
 {
   START: substring(sym('sentence')),
   sentence: repeat(sym('word'), sym('whitespace')),
@@ -353,51 +313,33 @@ testP(P.substring(sentence), input);</example>
 }
 </grammar>
 
-
 ## Alternate Parser
 The next most common parse combinator after the sequence parser, is the alt() parser.
 It's job is to take multiple delgate parsers, just like seq(), but to succeed if any of them
 succeed. It tries parsing with each composed parser in turn, and returns the result of the
 first one that succeeds.
-<example>
-testP(P.alt(P.literal('A'), P.literal('B')), [ 'A', 'B', 'C' ]);
 
-// Or just:
-
-testP(P.alt('A', 'B'), [ 'A', 'B', 'C' ]);</example>
-
-<grammar input="B">
+<grammar inputs="A|B|C" input="B">
 { START: alt(literal('A'), literal('B')) }
 </grammar>
-
 
 ## Repeat
 The repeat() parser takes a single delegate parser and repeatedly uses it to parse
 the input stream until it fails. The result of all delegate parses are combined in an array.
 
-<example>
-testP(P.repeat(P.range('0','9')), [ '1', '1x', '123xyz', 'abc' ]);
-
-// Same example with the values converted into strings
-testP(P.str(P.repeat(P.range('0','9'))), [ '1', '1x', '123xyz', 'abc' ]);</example>
-
-<grammar input="123xyz">
+<grammar inputs="1|1x|123xyz|abc" input="123xyz">
 { START: repeat(range('0', '9')) }
 </grammar>
-
 
 ## Plus
 You might have noticed that in the above example, repeat(0-9) succeeded in parsing the string 'abc' and provided an empty string result "" since there was no match. This is because repeat() parses zero or more occurrences of the delegate parser, so failure is a valid option. However, it's often the
 case that you want to consider a repeated parser to have succeeded when it parses one or more
 times. For this, there's the plus() parser, which behaves just like repeat(), but fails in
 the case where the delegate parses 0 times.
-<example>
-testP(P.str(P.plus(P.range('0','9'))), [ '1', '1x', '123xyz', 'abc' ]);</example>
 
-<grammar input="123xyz">
+<grammar inputs="1|1x|123xyz|abc" input="123xyz">
 { START: str(plus(range('0', '9'))) }
 </grammar>
-
 
 ## Delimited Repeat
 It's common to want to use repeat() to parse some pattern where each entry is separated
@@ -410,7 +352,6 @@ testP(
   P.str(P.repeat(P.str(P.seq(P.range('a','z'), P.literal(','))))),
   [ 'a', 'a,b', 'a,b,c', 'a,b,c,'
 ]);
-
 
 // Notice that the above never parsed the last letter, except for the last case: 'a,b,c,'
 // because there's a bug in our parser. We only want the comma between letters, not after,
@@ -441,10 +382,9 @@ testP(
   [ '', 'a', 'a,b', 'a,b,c', 'a,b,c,'
 ]);</example>
 
-<grammar input="a,b,c">
+<grammar inputs="|a|a,b|a,b,c|a,b,c," input="a,b,c">
 { START: str(repeat(range('a', 'z'), literal(','))) }
 </grammar>
-
 
 ## Repeat with a Number of Repetitions
 The repeat() parses zero or more times and plus() repeats one or more times, but sometimes
@@ -457,16 +397,10 @@ The below example checks passwords to ensure that they're at least five characte
 Notice that the repeat() parser still continues until it fails, hence for the last sample
 it repeated six times, meaning that the specified repeat parameter is the miniumum number
 of repetitions not the absolute limit.
-<example>
-testP(
-  P.str(P.repeat(P.alt(P.range('a','z'), P.range('A', 'Z'), P.range('0', '9'), P.anyChar('!@#$%^&*')), undefined, 5, 7)),
-  [ 's', 's@', 's@c', 's@C&', 's@C&t', 's@C&t1', 's@C&t123456' ]
-);</example>
 
-<grammar input="s@C&t1">
+<grammar inputs="s|s@|s@c|s@C&|s@C&t|s@C&t1|s@C&t123456" input="s@C&t1">
 { START: str(repeat(alt(range('a', 'z'), range('A', 'Z'), range('0', '9'), chars('!@#$%^&*')), undefined, 5, 7)) }
 </grammar>
-
 
 ## Not Parser
 The Not parser is unusual in that it suceeds only if it's delegate parser fails.
@@ -476,14 +410,13 @@ var stringBody   = P.str(P.repeat(P.not(quote, P.anyChar())));
 var stringParser = P.seq(quote, stringBody, quote);
 testP(P.str(stringParser), [ '""', '"a"', '"abc13234$@#$"', '"abc"asfasdf"' ]);</example>
 
-<grammar>
+<grammar inputs='""|"a"|"abc13234$@#$"|"abc"asdf|abc'>
 {
   START: seq(sym('quote'), sym('body'), sym('quote')),
   quote: literal('"'),
   body: str(repeat(not(sym('quote'), anyChar())))
 }
 </grammar>
-
 
 ## Seq1 Parser
 Notice that in the previous string parser example, our result value was an array where
@@ -501,14 +434,13 @@ var stringBody   = P.str(P.repeat(P.not(quote, P.anyChar())));
 var stringParser = P.seq1(1, quote, stringBody, quote);
 testP(stringParser, [ '""', '"a"', '"abc13234$@#$"', '"abc"asfasdf"' ]);</example>
 
-<grammar>
+<grammar inputs='""|"a"|"abc13234$@#$"|"abc"asdf|abc'>
 {
   START: seq1(1, sym('quote'), sym('body'), sym('quote')),
   quote: literal('"'),
   body: str(repeat(not(sym('quote'), anyChar())))
 }
 </grammar>
-
 
 ## Until Parser
 The string pattern in the above example combined repeat(), not(), and anyChar() in order to extract the string.
@@ -520,24 +452,18 @@ var quote        = P.literal('"');
 var stringParser = P.str(P.seq1(1, quote, P.until(quote)));
 testP(stringParser, [ '""', '"a"', '"abc13234$@#$"', '"abc"asfasdf"' ]);</example>
 
-<grammar>
+<grammar inputs='""|"a"|"abc13234$@#$"|"abc"asdf|abc'>
 { START: str(seq1(1, literal('"'), until(literal('"')))) }
 </grammar>
-
 
 ## Optional Parser
 The optional() parser composes a single delegate parser and if that parser parses, then it returns
 its result, otherwise it returns the PStream as is, without failing. This lets parsing
 continue from the same point.
-<example>
-testP(P.seq(P.optional('header'), 'body'),
-  [ 'headerbody', 'body', 'header' ]
-);</example>
 
-<grammar input="headerbody">
+<grammar inputs="headerbody|body|header" input="headerbody">
 { START: seq(optional(literal('header')), literal('body')) }
 </grammar>
-
 
 ## Example
 The following example uses optional() several times to create a phone number parser where
@@ -571,7 +497,7 @@ testP(phoneNumber, [
   '5551234'
 ]);</example>
 
-<grammar input="1 (555) 555-1234">
+<grammar inputs="1 (555) 555-1234|1(555) 555-1234|(555) 555-1234|(555)555-1234|555-1234|5551234" input="1 (555) 555-1234">
 {
   START: sym('phoneNumber'),
   digit: range('0', '9'),
@@ -579,7 +505,6 @@ testP(phoneNumber, [
   phoneNumber: str(seq(optional('1'), optional(' '), optional(sym('areaCode')), optional(' '), str(seq(sym('digit'), sym('digit'), sym('digit'))), optional('-'), str(seq(sym('digit'), sym('digit'), sym('digit'), sym('digit')))))
 }
 </grammar>
-
 
 ## Optimizations
 ## Repeat0
@@ -611,14 +536,13 @@ testP(words, [
   `
 ]);</example>
 
-<grammar input="word word   abc">
+<grammar inputs="abc|word word   abc     xyz" input="word word   abc">
 {
   START: repeat(sym('word'), sym('whitespace')),
   whitespace: repeat0(chars(' \t\n'), null, 1),
   word: str(plus(range('a', 'z')))
 }
 </grammar>
-
 
 ## Seq0 and Until0
 Just as repeat0() is the no-value version of repeat(), seq0() is the no-value version of seq() and until0() is the no-value version of until().
@@ -634,10 +558,9 @@ var comment = P.seq1(1, '/*', P.str(P.until('*/')));
 testP(comment, [ "/* This is a comment. Don't ignore the results. */" ]);
 </example>
 
-<grammar input="/* a comment */">
+<grammar inputs="/* This is a comment. Ignore the results. */" input="/* a comment */">
 { START: seq0('/*', until0('*/')) }
 </grammar>
-
 
 ## Example: Boolean
 Consider the following simple parser which is meant to parse boolean true or false values:
@@ -654,16 +577,14 @@ testP(booleanParser1, [ 'true', 'false' ]);
 // to literal() which substitutes the value to be returned instead of the specified
 // string literal, in the event that the parse succeeds.
 
-
 var booleanParser2 = P.alt(P.literal('true', true), P.literal('false', false));
 testP(booleanParser2, [ 'true', 'false' ]);
 
 // Now we get actual true and false values rather than "true" and "false".</example>
 
-<grammar input="false">
+<grammar inputs="true|false|maybe" input="false">
 { START: alt('true', 'false') }
 </grammar>
-
 
 ## Grammars: Parenthesis Matching
 <pre>
@@ -727,13 +648,12 @@ testP(p, [
 
 </example>
 
-<grammar input="((())()(()))">
+<grammar inputs="|()|(())|()()|((())()(()))|)(|(()|())" input="((())()(()))">
 {
   START: seq1(0, sym('parens'), eof()),
   parens: str(repeat(str(seq('(', sym('parens'), ')'))))
 }
 </grammar>
-
 
 ## Grammars: Phone Number Parser
 While the above Grammar had only a single rule 'parens', it is more common for a grammar
@@ -796,7 +716,7 @@ testP(p, [
   '5551234'
 ]);</example>
 
-<grammar input="+1 (555) 555-1234">
+<grammar inputs="+1 (555) 555-1234|1 (555) 555-1234|1(555) 555-1234|(555) 555-1234|(555)555-1234|555-1234|5551234" input="+1 (555) 555-1234">
 {
   START: str(seq(optional(sym('countryCode')), alt(str(seq(sym('areaCode'), optional(' ', ' '), sym('simple'))), sym('simple')))),
   simple: str(seq(sym('prefix'), optional(sym('separator'), '-'), sym('line'))),
@@ -808,7 +728,6 @@ testP(p, [
   line: str(seq(sym('digit'), sym('digit'), sym('digit'), sym('digit')))
 }
 </grammar>
-
 
 ## Semantic Actions
 <pre>
@@ -857,7 +776,6 @@ foam.CLASS({
   ]
 });
 
-
 var p = VersionParser.create();
 
 testP(p, [ '1', '1.1', '1.1b', '3.14159-26b' ]);</example>
@@ -866,7 +784,7 @@ testP(p, [ '1', '1.1', '1.1b', '3.14159-26b' ]);</example>
 The following parser uses two semantic actions to parse email addresses which can be
 either simple like "john@email.com" or labelled like "John Doe &lt;john@email.com&gt;".
 
-<grammar input="john@email.com">
+<grammar inputs="john@email.com|jane@email.com,john@email.com|not an address" input="john@email.com">
 {
   START: sym('address'),
   addressList: repeat(sym('address'), seq(',', repeat(' '))),
@@ -878,7 +796,6 @@ either simple like "john@email.com" or labelled like "John Doe &lt;john@email.co
 
 <!--
 TODO: Doesn't parse for some reason.
-
 
 <example>
 
@@ -1010,7 +927,6 @@ foam.CLASS({
   ]
 });
 
-
 // A generic Expression Parser. It will just tell you if the expression is valid,
 // but does not do anything to evaluate it.
 foam.CLASS({
@@ -1090,7 +1006,7 @@ testP(interp, input);
 
 // We could extend ExpressionParser again to implement a pretty-printer or a compiler</example>
 
-<grammar input="3.14159-26b">
+<grammar inputs="1|1.1|1.1b|3.14159-26b" input="3.14159-26b">
 {
   START: repeat(sym('component'), optional(sym('separator'))),
   component: alt(sym('number'), sym('string')),
@@ -1100,7 +1016,6 @@ testP(interp, input);
   separator: alt('.', '-')
 }
 </grammar>
-
 
 ## Another Reuse Example
 Imagine we wanted to create a calculator for working with binary numbers. Rather than

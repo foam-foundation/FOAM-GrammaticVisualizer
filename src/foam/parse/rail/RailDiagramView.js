@@ -278,7 +278,12 @@ foam.CLASS({
       view: { class: 'foam.u2.CheckBox' },
       postSet: function(_, on) { if ( on && this.rightWidth === this.PANEL_WIDTH ) this.rightWidth = Math.max(this.PANEL_WIDTH, Math.round(window.innerWidth * this.DOC_SHARE)); } },
     { class: 'Int', name: 'rightWidth', factory: function() { return this.PANEL_WIDTH; }, documentation: 'Right column width in px; the splitter drags it, opening the document view widens it once.' },
-    { class: 'Boolean', name: 'debugHook', documentation: 'Expose window.__rail so scripted checks can drive the page deterministically.' }
+    { class: 'Boolean', name: 'debugHook', documentation: 'Expose window.__rail so scripted checks can drive the page deterministically.' },
+    {
+      class: 'Boolean',
+      name: 'compact',
+      documentation: 'Embedded in a document (the <grammar> tag): the host owns the grammar and the inputs, so no title, hint, grammar sources or More row; just canvas, transport and panels.'
+    }
   ],
 
   methods: [
@@ -302,7 +307,9 @@ foam.CLASS({
         var size = function() { self.scene.viewWidth = el.clientWidth; self.scene.viewHeight = el.clientHeight; };
         new ResizeObserver(size).observe(el);
         size();
-        if ( self.grammar ) self.useGrammar(self.grammar);
+        // A grammar given before render has no strips yet; one loaded since only needs the fit.
+        if ( self.grammar && ! self.builder ) self.useGrammar(self.grammar);
+        else if ( self.grammar ) self.scene.fitWidth();
       });
       this.ribbonEl.el().then(function(el) {
         var size = function() { self.ribbon.width = el.clientWidth; };
@@ -349,7 +356,7 @@ foam.CLASS({
       /** Top toolbar: camera, rule filter, find/unfold, value and legend toggles. */
       var self = this;
       // First row: what everyone needs. The rest unfolds behind More (progressive disclosure).
-      e.start('span').addClass(this.myClass('title')).addClass('p-bold').add(this.TITLE).end()
+      e.callIf(! this.compact, function() { this.start('span').addClass(self.myClass('title')).addClass('p-bold').add(self.TITLE).end(); })
         .start(this.FIT_WIDTH, { size: 'SMALL' }).end()
         .start(this.FIT_ALL, { size: 'SMALL' }).end()
         .start(this.ZOOM_IN, { size: 'SMALL' }).end()
@@ -358,8 +365,10 @@ foam.CLASS({
           .on('keydown', function(ev) { if ( ev.key === 'Enter' ) self.goToFirstMatch(); })
         .end()
         .call(function() { self.check(this, self.SHOW_VALUES, self.VALUES_TOGGLE); })
-        .start(this.TOGGLE_MORE, { size: 'SMALL', label$: this.moreShown$.map(function(o) { return o ? self.LESS : self.MORE; }) }).end()
-        .start('span').addClass(this.myClass('hint')).addClass('p-sm').add(this.HINT).end()
+        .callIf(! this.compact, function() {
+          this.start(self.TOGGLE_MORE, { size: 'SMALL', label$: self.moreShown$.map(function(o) { return o ? self.LESS : self.MORE; }) }).end()
+            .start('span').addClass(self.myClass('hint')).addClass('p-sm').add(self.HINT).end();
+        })
         .start('div').addClass(this.myClass('bar2')).show(this.moreShown$)
           .call(function() { self.check(this, self.SHOW_ALL, self.unreachableCount$.map(function(n) { return self.ALL_RULES + ' (' + n + ' ' + self.UNREACHABLE_WORD + ')'; })); })
           .call(function() { self.check(this, self.SHOW_LANES, self.LANES_TOGGLE); })
@@ -427,25 +436,26 @@ foam.CLASS({
     function renderPanels(e) {
       /** Right column: grammar sources, input + transport, then ribbon or document view, status, derivation. */
       var self = this;
-      // Sources: the preset picker is the one control everyone needs; the rest unfolds.
-      e.start('div').addClass(this.myClass('section')).addClass(this.myClass('gram'))
-          .start('div').addClass(this.myClass('row'))
-            .start(this.PRESET, { placeholder: this.PRESET_PLACEHOLDER, choices: Object.keys(this.presets).map(function(k) { return [ k, k ]; }) }).addClass(this.myClass('presetPick')).end()
-            .start(this.TOGGLE_SOURCES, { size: 'SMALL', label$: this.sourcesShown$.map(function(o) { return ( o ? '▾ ' : '▸ ' ) + self.OTHER_SOURCES; }) }).end()
+      // Sources: the preset picker is the one control everyone needs; the rest unfolds. A compact
+      // (embedded) viewer has its grammar from the host and shows no sources at all.
+      e.callIf(! this.compact, function() { this.start('div').addClass(self.myClass('section')).addClass(self.myClass('gram'))
+          .start('div').addClass(self.myClass('row'))
+            .start(self.PRESET, { placeholder: self.PRESET_PLACEHOLDER, choices: Object.keys(self.presets).map(function(k) { return [ k, k ]; }) }).addClass(self.myClass('presetPick')).end()
+            .start(self.TOGGLE_SOURCES, { size: 'SMALL', label$: self.sourcesShown$.map(function(o) { return ( o ? '▾ ' : '▸ ' ) + self.OTHER_SOURCES; }) }).end()
           .end()
-          .start('div').addClass(this.myClass('row')).show(this.sourcesShown$)
-            .start(this.REGISTERED, { placeholder: this.REGISTERED_PLACEHOLDER, choices$: this.registeredChoices$ }).end()
-            .start(this.CLASS_ID, { placeholder: this.CLASS_ID_PLACEHOLDER })
+          .start('div').addClass(self.myClass('row')).show(self.sourcesShown$)
+            .start(self.REGISTERED, { placeholder: self.REGISTERED_PLACEHOLDER, choices$: self.registeredChoices$ }).end()
+            .start(self.CLASS_ID, { placeholder: self.CLASS_ID_PLACEHOLDER })
               .on('keydown', function(ev) { if ( ev.key === 'Enter' ) self.loadClassId(self.classId); })
             .end()
-            .start(this.TOGGLE_GRAMMAR, { size: 'SMALL', label$: this.grammarShown$.map(function(o) { return ( o ? '▾ ' : '▸ ' ) + self.TOGGLE_GRAMMAR.label; }) }).end()
+            .start(self.TOGGLE_GRAMMAR, { size: 'SMALL', label$: self.grammarShown$.map(function(o) { return ( o ? '▾ ' : '▸ ' ) + self.TOGGLE_GRAMMAR.label; }) }).end()
           .end()
-          .start('div').show(this.grammarShown$)
-            .start('div').addClass(this.myClass('hint')).addClass('p-sm').add(this.TYPED_TITLE).end()
-            .start(this.GRAMMAR_TEXT).attrs({ spellcheck: false }).end()
-            .start(this.LOAD_TYPED, { size: 'SMALL' }).end()
+          .start('div').show(self.grammarShown$)
+            .start('div').addClass(self.myClass('hint')).addClass('p-sm').add(self.TYPED_TITLE).end()
+            .start(self.GRAMMAR_TEXT).attrs({ spellcheck: false }).end()
+            .start(self.LOAD_TYPED, { size: 'SMALL' }).end()
           .end()
-        .end()
+        .end(); })
         // Empty state: say what to do until a grammar is loaded.
         .start('div').addClass(this.myClass('hint')).addClass(this.myClass('emptyHint')).addClass('p-sm').show(this.grammar$.map(function(g) { return ! g; })).add(this.NO_GRAMMAR_HINT).end()
         .start('div').addClass(this.myClass('section')).addClass(this.myClass('input'))
