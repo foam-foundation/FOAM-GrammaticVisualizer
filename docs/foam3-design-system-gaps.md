@@ -28,6 +28,10 @@ design system · 🟡 paper cut — cost time, not design.
 | 15 | `TextArea` needs a hand-picked `rows`; no content sizing (suggestion) | 🟡 | `field-sizing: content` + `max-height` by default |
 | 16 | `TabChoiceView` always binds the URL | 🟡 | `memorable` switch on the view |
 | 17 | A markdown tag's class only registers once something references it | 🟡 | Eager-load files that carry a `registerElement` script |
+| 18 | Two theming systems: Theme colour fields are CSS macros, not tokens | 🟠 | Retire the macro fields or make them token overrides |
+| 19 | No screen for `CSSTokenOverride`, the real per-theme theming | 🟠 | A token override editor on the Theme screen |
+| 20 | `ImageView` renders a picture at natural size | 🟡 | A bounded preview view for `Image` properties |
+| 21 | Theme fields explain nothing: no `help`, no units, raw class names | 🟡 | `help` on every Theme property |
 
 ---
 
@@ -147,3 +151,31 @@ design system · 🟡 paper cut — cost time, not design.
 **foam3** · `registerElement` runs in a `foam.SCRIPT` inside the class file, and a class file loads on first lookup of the class. Until then `MarkdownView` renders `<grammar>` as plain text — silently. `<example>` only works because the console's `example` command `requires` it, which the loader follows.
 **Did** · a `/grammar` console command (`GrammarCommand`, listed in `journals/cmds.jrl`) that `requires` `GrammarTag`; the console loads its commands at start, so the tag is registered before any flow renders.
 **Fix** · let a pom entry mark a file eager (`{ name, flags, eager: true }`), or have `MarkdownView` try `foam.maybeLookup` on an unknown tag name.
+
+## 18. Two theming systems: Theme colour fields are CSS macros, not tokens 🟠
+
+**Needed** · a Theme screen where changing a colour changes the app.
+**foam3** · `Theme.primary1..5`, `secondary*`, `approval*`, `warning*`, `destructive*`, `grey*`, `black`, `white`, `inputHeight`, `inputVerticalPadding`, `inputHorizontalPadding` are plain strings that `ApplicationController.MACROS` text-replaces into `/*%PRIMARY1%*/` and `$inputHeight` in CSS (`ApplicationController.js:132-178`, `:676-717`). Five files still use the colour macros; every view written with `$primary500`-style tokens ignores them. The screen gives no hint which system a field belongs to.
+**Did** · `ThemeColoursView` labels the fields "Legacy CSS macros" and puts the token overrides under them.
+**Fix** · drop the macro colour fields, or have the app convert them into `CSSTokenOverride` rows on save.
+
+## 19. No screen for `CSSTokenOverride`, the real per-theme theming 🟠
+
+**Needed** · set `$primary500` for one theme, light and dark.
+**foam3** · `cssTokenOverrideDAO` + `CSSTokenOverrideService` do exactly this (`doc/fbe/CSSTokens.md` "Overriding Tokens"), but no menu, no Theme section and no view lists or edits the rows. The only way in is a journal line or the generic Data Management browser.
+**Did** · `TokenOverridesView` (table with swatches, add form, per-row remove) under the Colours tab of the app's Theme screen.
+**Fix** · ship that table in `foam.core.theme` and reference it from a `tokens` section on `Theme`.
+
+## 20. `ImageView` renders a picture at natural size 🟡
+
+**Needed** · a logo preview on the Theme screen.
+**foam3** · `Theme.logo` and four siblings use `MultiView [TextArea, ImageView]`; `foam.u2.view.ImageView` tags `foam.u2.tag.Image` with no width, height or CSS, so a 1200px logo fills the page. `ThemeImageUploadView` (Customise Theme) bounds its preview with its own `max-width: 50%`.
+**Did** · `ThemeImagesView`: a 15rem × 7.5rem box per image, light and dark surface, `object-fit: contain`.
+**Fix** · `ImageView` takes a `maxWidth`/`maxHeight` (or a `displayWidth` the `Image` property already has) and bounds by default.
+
+## 21. Theme fields explain nothing 🟡
+
+**Needed** · a user who opens the Inputs or Navigation tab should learn what `inputHeight` or `sideNav` does.
+**foam3** · the properties have `documentation` (shown nowhere in the UI) and no `help`; `PropertyBorder` renders `help` as a ? icon with an expandable text (`PropertyBorder.js:375-414`). `sideNav` is a JSON view spec in a plain string field; `topNavigation` and `footerView` are class ids with no default shown.
+**Did** · `ThemeDetailView` passes `help` per field through `SectionView.config`; `InputSizingView` adds a live sample box.
+**Fix** · `help` on the Theme properties in foam3; a view-spec editor for `sideNav`.

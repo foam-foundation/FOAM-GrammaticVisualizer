@@ -22,7 +22,8 @@ wrong result) · 📖 discoverability (the answer existed, nothing pointed to it
 | 8 | `MarkdownView` renders asynchronously; probing right after `write()` gives false negatives | 🕳️ | Document the `isMerged` 150 ms delay; expose a render promise |
 | 9 | An HTML comment in markdown hides a whole example; an `<html>` block needs a blank line before it | 🕳️ | Markdown guide: block rules for custom tags |
 | 10 | Property `onKey` silently overrides a view class default (`RangeView`) | 🕳️ | `fromProperty` defers to a view-class default |
-| 11 | `requires:` is a lazy getter; `foam.lookup(id, true)` is the only way to ask "is it loaded" | 📖 | One line in `foam/lang/CLAUDE.md` (it is there now) |
+| 11 | `requires:` is a lazy getter; `foam.maybeLookup(id)` is the only way to ask "is it loaded" | 📖 | One line in `foam/lang/CLAUDE.md` (it is there now) |
+| 12 | `foam.lookup(id, true)` looks like a soft lookup but the flag is ignored, and `foam.assert` is `console.assert`: it logs, never throws, so `try/catch` never sees it | 🕳️ | Reject extra arguments, or make the shortcut forward to `maybeLookup`; say in `Context.js` that assert does not throw |
 
 ## 1. `tools/` has no index 📖
 
@@ -104,5 +105,28 @@ the property's `false`. The slider moved only on release; nothing said why.
 ## 11. "Is this class loaded?" 📖
 
 `requires:` is a lazy getter, so `this.Foo` always returns something; only
-`foam.lookup(id, true)` answers whether the file loaded. Already in
+`foam.maybeLookup(id)` answers whether the file loaded. Already in
 `foam/lang/CLAUDE.md`; listed here because it is the question behind #4.
+
+## 12. A soft lookup that is not soft 🕳️
+
+`scanRegistered` called `foam.lookup(id, true)` for every id in `foam.USED`, trusting
+the `true` to mean "return null if missing". The `foam.lookup` shortcut takes one argument
+(`Context.js:236`), so every refinement in `USED` (which registers nothing under its own
+id, `EndBoot.js:322`) printed `Assertion failed: Could not find any registered class`.
+The surrounding `try/catch` caught nothing because `foam.assert` is
+`console.assert.bind(console)` (`foam.js:305`): a red line, no exception. One hundred
+lines of noise per Diagram tab, zero functional effect, so nothing flagged it. Use
+`foam.maybeLookup`, and skip `USED` entries whose model has `refines`.
+
+## 12. A removed property stays referenced for two years because nothing exercises the view
+
+`DAOControllerConfig.browseActions` was removed in April 2024 (foam3 1fd8f18b, "Remove
+browse actions"), but `foam.comics.v2.DAOBrowseControllerView` still read
+`config.browseActions.length` (`DAOBrowseControllerView.js:284`). Every default DAO menu
+now goes through `foam.comics.v3.DAOController`, so the v2 view only runs for the few
+screens that name it (`ThemeCustomisationBrowseController`, `DataManagement`,
+`EmbeddedTableView`), and those have no tests. Result: foam3's own Admin → Customise
+Theme menu throws `Cannot read properties of undefined (reading 'length')` on open, in
+every app, with nothing in CI to say so. Found by clicking. Guarded with `?.` here; the
+real fix is a smoke test that opens every menu in `menus.jrl` once.
