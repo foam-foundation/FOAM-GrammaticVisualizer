@@ -24,6 +24,7 @@ design system · 🟡 paper cut — cost time, not design.
 | 11 | Standalone page can't get base typography from the core pom | 🟡 | `foam.u2.BaseStyles` in the u2 pom |
 | 12 | Dark mode reaches a page with no theme (observation) | ✅ | Docs |
 | 13 | No overflow / "More" container that can hold property views | 🟡 | `OverlayActionListView` accepting any view |
+| 14 | A property's `onKey` silently overrides `RangeView`'s live default | 🟡 | `fromProperty` keeps a view-class default |
 
 ---
 
@@ -115,3 +116,10 @@ design system · 🟡 paper cut — cost time, not design.
 **foam3** · `foam.u2.view.OverlayActionListView` (what `ButtonGroup` overflows into) takes actions only; `ExpandableBorder` has no header toggle and caps content at 500px.
 **Did** · a `toggleMore` text action and a second toolbar row under `show(moreShown$)`.
 **Fix** · an overlay list that accepts any view spec, or an `ExpandableBorder` with a built-in header toggle.
+
+## 14. A property's `onKey` silently overrides `RangeView`'s live default 🟡
+
+**Needed** · a slider that scrubs the trace while dragging.
+**foam3** · `RangeView` declares `onKey: true` (`RangeView.js:35`), but `Input.fromProperty` tests `this.hasOwnProperty('onKey')` — a class default is not an own value — and copies the property's `onKey` (false) over it (`tag/Input.js:192-193`). The slider then updates on release only, with nothing to say why.
+**Did** · `view: { class: 'foam.u2.RangeView', onKey: true }` on the property.
+**Fix** · `fromProperty` should defer to a value the view class sets, or `RangeView` should bind `input` unconditionally (a range has no "typing").
