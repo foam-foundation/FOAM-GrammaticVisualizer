@@ -82,7 +82,7 @@ foam.CLASS({
     { name: 'LEGEND_HISTORY',    message: '✓ ran earlier, rule idle now' },
     { name: 'LEGEND_NEVER',      message: 'not reached' },
     { name: 'VALUES_TOGGLE',     message: 'values on boxes' },
-    { name: 'LANES_TOGGLE',      message: 'values per rule' },
+    { name: 'LANES_TOGGLE',      message: 'show rule values' },
     { name: 'LEGEND_VALUES',     message: 'text under a box = what it matched so far, in order (…+n = more, hover lists them) · row under a rule = every value that rule matched' },
     { name: 'LEGEND_COUNTER',    message: '"tried ×n · ✓m" under a rule = attempts and matches so far · click the rule name to list the matches' },
     { name: 'LEGEND_SELECTED',   message: 'heavy outline = selected from the derivation panel' },
@@ -102,8 +102,13 @@ foam.CLASS({
     { name: 'NO_SYMBOLS',        message: 'no symbols' },
     { name: 'PAUSE',             message: '❚❚ pause' },
     { name: 'SLIDER_HINT',       message: 'scrub through the recorded parse' },
-    { name: 'NOT_PARSED',        message: 'input changed — press Parse to parse it' },
+    { name: 'NOT_PARSED',        message: 'input changed — press Parse' },
+    { name: 'PRESS_PARSE',       message: 'press Parse' },
     { name: 'LOAD_FIRST',        message: 'load a grammar first' },
+    { name: 'NO_GRAMMAR_HINT',   message: 'Pick a preset, or a grammar registered in this page, then press Parse.' },
+    { name: 'MORE',              message: 'More ▾' },
+    { name: 'LESS',              message: 'Less ▴' },
+    { name: 'OTHER_SOURCES',     message: 'other sources' },
     { name: 'PRESET_PLACEHOLDER',     message: 'preset…' },
     { name: 'REGISTERED_PLACEHOLDER', message: 'registered in this page…' },
     { name: 'CLASS_ID_PLACEHOLDER',   message: 'class id, Enter' },
@@ -117,6 +122,14 @@ foam.CLASS({
     ^title { margin-right: $space-1_5; }
     ^check { display: inline-flex; align-items: center; gap: $space-1; }
     ^bar .foam-u2-TextField { flex: 0 1 18rem; width: auto; }
+    ^bar2 { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: $space-1_5 $space-2_5; align-items: center; }
+    ^presetPick { flex: 1 1 18rem; }
+    ^emptyHint { padding: $space-2; }
+    ^parse { width: 100%; margin-top: $space-1_5; }
+    @keyframes foam-parse-rail-RailDiagramView-attention { from { box-shadow: 0 0 0 0.6rem $primary300; } to { box-shadow: 0 0 0 0 transparent; } }
+    ^attention { animation: foam-parse-rail-RailDiagramView-attention 900ms ease-out 2; }
+    ^readout { flex: none; font-family: monospace; color: $foam.parse.rail.RailTheme.inkMuted; white-space: nowrap; }
+    ^sliderRow > .foam-u2-RangeView { flex: 1; }
     ^main { flex: 1; min-height: 0; display: flex; }
     ^left { flex: 1; min-width: 0; position: relative; }
     ^host { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
@@ -147,8 +160,8 @@ foam.CLASS({
     ^row > .foam-u2-ActionView { flex: none; }
     ^gram textarea { width: 100%; box-sizing: border-box; font-family: monospace; margin: $space-1_5 0 $space-1; }
     ^input textarea { width: 100%; box-sizing: border-box; font-family: monospace; resize: vertical; }
-    ^transport { display: flex; flex-wrap: wrap; gap: $space-1; margin: $space-1_5 0 $space-1; }
-    ^transport > * { flex: 1; white-space: nowrap; }
+    ^transport { display: flex; gap: $space-1; margin: $space-1_5 0 $space-1; }
+    ^transport > * { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* The app's text-input CSS sizes every <input>; a range needs the native control back. */
     ^slider input[type=range] { width: 100%; height: auto; margin: 0; padding: 0; border: none; background: none; appearance: auto; }
     ^ribbon { flex: none; overflow: hidden; border-bottom: 1px solid $foam.parse.rail.RailTheme.lineSoft; }
@@ -213,6 +226,9 @@ foam.CLASS({
     },
     { class: 'Int', name: 'traceLength', documentation: 'Length of the trace, 0 without one; the slider maximum.' },
     { class: 'Boolean', name: 'playing', documentation: 'Auto-stepping; togglePlay flips it.' },
+    { class: 'Boolean', name: 'needsParse', documentation: 'The grammar or input changed since the last parse; the Parse button draws attention to itself.' },
+    { class: 'Boolean', name: 'moreShown',    documentation: 'Second toolbar row (rule filters, value lanes, legend, fold/unfold) unfolded.' },
+    { class: 'Boolean', name: 'sourcesShown', documentation: 'Grammar sources beyond the presets (page grammars, class id, typed grammar) unfolded.' },
     { name: 'ribbon', factory: function() { return this.RailInputRibbon.create({ theme: this.scene.theme, measure: this.scene.measure }); } },
     { name: 'panel',  factory: function() { var self = this; return this.DerivationPanel.create({ onSelect: function(p) { self.highlight(p); } }); } },
     { name: 'doc',    factory: function() { var self = this; return this.DocumentView.create({ onSelect: function(p) { self.highlight(p); } }); } },
@@ -330,19 +346,25 @@ foam.CLASS({
     function renderBar(e) {
       /** Top toolbar: camera, rule filter, find/unfold, value and legend toggles. */
       var self = this;
+      // First row: what everyone needs. The rest unfolds behind More (progressive disclosure).
       e.start('span').addClass(this.myClass('title')).addClass('p-bold').add(this.TITLE).end()
         .start(this.FIT_WIDTH, { size: 'SMALL' }).end()
         .start(this.FIT_ALL, { size: 'SMALL' }).end()
-        .call(function() { self.check(this, self.SHOW_ALL, self.unreachableCount$.map(function(n) { return self.ALL_RULES + ' (' + n + ' ' + self.UNREACHABLE_WORD + ')'; })); })
+        .start(this.ZOOM_IN, { size: 'SMALL' }).end()
+        .start(this.ZOOM_OUT, { size: 'SMALL' }).end()
         .start(this.FIND_TEXT, { placeholder: this.FIND_PLACEHOLDER })
           .on('keydown', function(ev) { if ( ev.key === 'Enter' ) self.goToFirstMatch(); })
         .end()
-        .start(this.UNFOLD_PATH, { size: 'SMALL' }).end()
-        .start(this.FOLD_ALL, { size: 'SMALL' }).end()
         .call(function() { self.check(this, self.SHOW_VALUES, self.VALUES_TOGGLE); })
-        .call(function() { self.check(this, self.SHOW_LANES, self.LANES_TOGGLE); })
-        .call(function() { self.check(this, self.LEGEND_SHOWN, self.LEGEND_TOGGLE); })
-        .start('span').addClass(this.myClass('hint')).addClass('p-sm').add(this.HINT).end();
+        .start(this.TOGGLE_MORE, { size: 'SMALL', label$: this.moreShown$.map(function(o) { return o ? self.LESS : self.MORE; }) }).end()
+        .start('span').addClass(this.myClass('hint')).addClass('p-sm').add(this.HINT).end()
+        .start('div').addClass(this.myClass('bar2')).show(this.moreShown$)
+          .call(function() { self.check(this, self.SHOW_ALL, self.unreachableCount$.map(function(n) { return self.ALL_RULES + ' (' + n + ' ' + self.UNREACHABLE_WORD + ')'; })); })
+          .call(function() { self.check(this, self.SHOW_LANES, self.LANES_TOGGLE); })
+          .call(function() { self.check(this, self.LEGEND_SHOWN, self.LEGEND_TOGGLE); })
+          .start(this.UNFOLD_PATH, { size: 'SMALL' }).end()
+          .start(this.FOLD_ALL, { size: 'SMALL' }).end()
+        .end();
     },
 
     function renderCanvas(e) {
@@ -403,9 +425,13 @@ foam.CLASS({
     function renderPanels(e) {
       /** Right column: grammar sources, input + transport, then ribbon or document view, status, derivation. */
       var self = this;
+      // Sources: the preset picker is the one control everyone needs; the rest unfolds.
       e.start('div').addClass(this.myClass('section')).addClass(this.myClass('gram'))
           .start('div').addClass(this.myClass('row'))
-            .start(this.PRESET, { placeholder: this.PRESET_PLACEHOLDER, choices: Object.keys(this.presets).map(function(k) { return [ k, k ]; }) }).end()
+            .start(this.PRESET, { placeholder: this.PRESET_PLACEHOLDER, choices: Object.keys(this.presets).map(function(k) { return [ k, k ]; }) }).addClass(this.myClass('presetPick')).end()
+            .start(this.TOGGLE_SOURCES, { size: 'SMALL', label$: this.sourcesShown$.map(function(o) { return ( o ? '▾ ' : '▸ ' ) + self.OTHER_SOURCES; }) }).end()
+          .end()
+          .start('div').addClass(this.myClass('row')).show(this.sourcesShown$)
             .start(this.REGISTERED, { placeholder: this.REGISTERED_PLACEHOLDER, choices$: this.registeredChoices$ }).end()
             .start(this.CLASS_ID, { placeholder: this.CLASS_ID_PLACEHOLDER })
               .on('keydown', function(ev) { if ( ev.key === 'Enter' ) self.loadClassId(self.classId); })
@@ -418,10 +444,13 @@ foam.CLASS({
             .start(this.LOAD_TYPED, { size: 'SMALL' }).end()
           .end()
         .end()
+        // Empty state: say what to do until a grammar is loaded.
+        .start('div').addClass(this.myClass('hint')).addClass(this.myClass('emptyHint')).addClass('p-sm').show(this.grammar$.map(function(g) { return ! g; })).add(this.NO_GRAMMAR_HINT).end()
         .start('div').addClass(this.myClass('section')).addClass(this.myClass('input'))
           .start(this.INPUT).attrs({ spellcheck: false }).end()
+          // The one primary action; it pulses when the grammar or input changed since the last parse.
+          .start(this.PARSE).addClass(this.myClass('parse')).enableClass(this.myClass('attention'), this.needsParse$).end()
           .start('div').addClass(this.myClass('transport'))
-            .start(this.PARSE, { size: 'SMALL' }).end()
             .start(this.STEP_BACK, { size: 'SMALL' }).end()
             .start(this.STEP_ONE, { size: 'SMALL' }).end()
             .start(this.STEP_OVER, { size: 'SMALL' }).end()
@@ -429,8 +458,9 @@ foam.CLASS({
             .start(this.TOGGLE_PLAY, { size: 'SMALL', label$: this.playing$.map(function(p) { return p ? self.PAUSE : self.TOGGLE_PLAY.label; }) }).end()
             .start(this.RUN_TO_END, { size: 'SMALL' }).end()
           .end()
-          .start('div').addClass(this.myClass('slider'))
+          .start('div').addClass(this.myClass('row')).addClass(this.myClass('sliderRow'))
             .start(this.STEP, { maxValue$: this.traceLength$ }).attrs({ title: this.SLIDER_HINT }).end()
+            .start('span').addClass(this.myClass('readout')).addClass('p-sm').add(this.step$, ' / ', this.traceLength$).end()
           .end()
           .call(function() { self.check(this, self.DOCUMENT_SHOWN, self.DOC_TOGGLE, self.myClass('docToggle')); })
         .end()
@@ -526,7 +556,8 @@ foam.CLASS({
       this.unreachableCount = this.builder.unreachableNames().length;
       this.rebuildStrips();
       this.dropTrace();
-      this.status = grammar.symbols.length ? grammar.symbols.length + ' rules, start = ' + this.startSymbol : this.NO_SYMBOLS;
+      this.status = grammar.symbols.length ? grammar.symbols.length + ' rules, start = ' + this.startSymbol + ' · ' + this.PRESS_PARSE : this.NO_SYMBOLS;
+      this.needsParse = !! grammar.symbols.length;
       this.scene.fitWidth();
     },
 
@@ -560,6 +591,7 @@ foam.CLASS({
       this.dropTrace();
       this.scene.applyTrace(null);
       this.status = this.NOT_PARSED;
+      this.needsParse = !! this.grammar;
     },
 
     function dropTrace() {
@@ -579,6 +611,7 @@ foam.CLASS({
       if ( ! this.grammar.symbols.length ) { this.status = this.NO_SYMBOLS; return; }
       try { this.trace = this.ParseTrace.create({ grammar: this.grammar, startSymbol: this.startSymbol, input: this.input }).record(); }
       catch (x) { this.trace = null; this.status = 'could not parse: ' + ( x.message || x ); return; }
+      this.needsParse = false;
       this.show(opt_step === undefined ? this.trace.length() : opt_step);   // the camera stays where the user put it; follow-pan takes over while stepping
     },
 
@@ -652,8 +685,34 @@ foam.CLASS({
       code: function() { this.scene.fitAll(); }
     },
     {
+      name: 'zoomIn',
+      label: '+',
+      toolTip: 'zoom in',
+      code: function() { this.scene.zoomAt(this.scene.viewWidth / 2, this.scene.viewHeight / 2, 1.25); }
+    },
+    {
+      name: 'zoomOut',
+      label: '−',
+      toolTip: 'zoom out',
+      code: function() { this.scene.zoomAt(this.scene.viewWidth / 2, this.scene.viewHeight / 2, 0.8); }
+    },
+    {
+      name: 'toggleMore',
+      label: 'More',
+      buttonStyle: 'TEXT',
+      toolTip: 'rule filters, value lanes, legend, fold and unfold',
+      code: function() { this.moreShown = ! this.moreShown; }
+    },
+    {
+      name: 'toggleSources',
+      label: 'other sources',
+      buttonStyle: 'TEXT',
+      toolTip: 'grammars registered in this page, a class id, or typed grammar text',
+      code: function() { this.sourcesShown = ! this.sourcesShown; }
+    },
+    {
       name: 'unfoldPath',
-      label: 'Unfold path',
+      label: 'unfold matched path',
       toolTip: 'open every rule reference on the derivation path, inside the start strip',
       isEnabled: function(trace) { return !! trace; },
       code: function() {
@@ -708,6 +767,7 @@ foam.CLASS({
     {
       name: 'parse',
       label: 'Parse',
+      buttonStyle: 'PRIMARY',
       toolTip: 'record the parse of the input, then stand at step 0',
       isEnabled: function(grammar) { return !! grammar; },
       code: function() { this.stopPlay(); this.record(0); }
@@ -728,14 +788,14 @@ foam.CLASS({
     },
     {
       name: 'stepOver',
-      label: '⏭ over',
+      label: 'step out',
       toolTip: 'skip to the end of the attempt just started',
       isEnabled: function(grammar) { return !! grammar; },
       code: function() { this.stopPlay(); if ( ! this.trace ) this.record(0); else this.show(this.trace.stepOverFrom(this.step)); }
     },
     {
       name: 'nextRule',
-      label: '⏭ rule',
+      label: 'next rule',
       toolTip: 'skip to the next rule entry',
       isEnabled: function(grammar) { return !! grammar; },
       code: function() { this.stopPlay(); if ( ! this.trace ) this.record(0); else this.show(this.trace.nextRuleFrom(this.step)); }
@@ -761,7 +821,7 @@ foam.CLASS({
     },
     {
       name: 'runToEnd',
-      label: '⏭⏭ end',
+      label: '⏭ end',
       toolTip: 'jump to the last event',
       isEnabled: function(grammar) { return !! grammar; },
       code: function() { this.stopPlay(); if ( ! this.trace ) this.record(); else this.show(this.trace.length()); }

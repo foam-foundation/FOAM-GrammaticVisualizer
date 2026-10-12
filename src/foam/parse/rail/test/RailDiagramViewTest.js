@@ -51,6 +51,26 @@ foam.CLASS({
       [ 'fitWidth', 'fitAll', 'unfoldPath', 'foldAll', 'loadTyped', 'parse', 'stepBack', 'stepOne', 'stepOver', 'nextRule', 'togglePlay', 'runToEnd' ]
         .forEach(function(n) { x.test(isAction(n), 'action ' + n + ' is declared'); });
       x.test(!! v.cls_.getAxiomByName('parse').toolTip, 'parse carries its tooltip');
+      var style = v.cls_.getAxiomByName('parse').buttonStyle;
+      x.test(( style.name || style ) === 'PRIMARY', 'parse is the one primary action');
+
+      // Progressive disclosure: the second toolbar row and the extra grammar sources start folded.
+      var hidden = function(el) { return !! el && el.getClientRects().length === 0; };
+      var bar2 = root.querySelector('.foam-parse-rail-RailDiagramView-bar2');
+      x.test(! v.moreShown && hidden(bar2), 'More row starts hidden');
+      v.toggleMore();
+      x.test(v.moreShown && ! hidden(bar2), 'toggleMore unfolds the row');
+      v.toggleMore();
+      x.test(root.querySelectorAll('.foam-parse-rail-RailDiagramView-bar > .foam-u2-ActionView').length <= 6, 'first toolbar row keeps few buttons');
+
+      // Empty state: before a grammar the column says what to do; the hint goes once one is loaded.
+      var fresh = this.RailDiagramView.create({}, x);
+      fresh.write();
+      x.test(/Pick a preset/.test(fresh.element_.textContent), 'empty state tells the user what to do');
+      fresh.usePreset('comma list (toy)');
+      x.test(hidden(fresh.element_.querySelector('.foam-parse-rail-RailDiagramView-emptyHint')), 'hint hidden once a grammar is loaded');
+      x.test(fresh.needsParse && /press Parse/.test(fresh.status), 'a loaded grammar asks for Parse');
+      fresh.remove();
 
       // Properties drive the scene: the rule filter, the unreachable toggle, the value toggles.
       var all = names().length;
@@ -82,8 +102,10 @@ foam.CLASS({
       x.test(v.playing === false, 'stopPlay stops');
 
       // Editing the input drops the trace.
+      x.test(v.needsParse === false, 'after parse nothing is pending');
       v.input = 'x';
       x.test(! v.trace && v.traceLength === 0 && v.status === v.NOT_PARSED, 'input change invalidates the trace');
+      x.test(v.needsParse === true, 'input change asks for Parse again');
 
       // Typed grammar: the text is a property bound to the editor; loadTyped compiles it.
       v.grammarText = "{ START: seq(literal('x'), eof()) }";
