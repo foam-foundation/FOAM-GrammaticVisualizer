@@ -11,10 +11,11 @@ foam.CLASS({
 
   documentation: `
     foam.core.theme.Theme with one tab per section, as TabbedDetailView draws it,
-    but the Colours, Icons / Images, Inputs and Navigation tabs get a view that
-    shows what the fields do: swatches and token overrides, bounded image
-    previews, a live input sample, and help on each navigation field. Every
-    other section renders as the plain SectionView. Mounted from the
+    but the Colours (retitled Legacy CSS), Icons / Images, Inputs and Navigation tabs
+    get a view that shows what the fields do: swatches, bounded image
+    previews, a live input sample, and help on each navigation field. A CSS
+    tokens tab (no Theme section behind it) holds the overrides and the token
+    catalogue. Every other section renders as the plain SectionView. Mounted from the
     grammaticVisualizer.theme-all menu through config.detailView.
   `,
 
@@ -23,16 +24,22 @@ foam.CLASS({
     'foam.u2.SegmentedTabs as Tabs',
     'com.foamdev.grammaticvisualizer.theme.InputSizingView',
     'com.foamdev.grammaticvisualizer.theme.ThemeColoursView',
-    'com.foamdev.grammaticvisualizer.theme.ThemeImagesView'
+    'com.foamdev.grammaticvisualizer.theme.ThemeImagesView',
+    'com.foamdev.grammaticvisualizer.theme.ThemeTokensView',
+    'foam.layout.Section'
   ],
 
   css: `
     /* TabbedDetailView pads .foam-u2-Tabs-content; the segmented class names differ, so pad them here. */
-    << .foam-u2-SegmentedTabs { padding: $space-3 $space-4; }
-    << .foam-u2-SegmentedTabs-content > div { padding: $space-2 0; }
+    << .foam-u2-SegmentedTabs { padding: $space-2_5; }
+    << .foam-u2-SegmentedTabs-content > div {
+      padding: $space-3 $space-4;
+    }
   `,
 
   messages: [
+    { name: 'LEGACY_TAB', message: 'Legacy CSS' },
+    { name: 'TOKENS_TAB', message: 'CSS tokens' },
     { name: 'HELP_DEFAULT_MENU', message: 'Menu the user lands on after login. Falls back to the first menu they may read.' },
     { name: 'HELP_UNAUTH_MENU', message: 'Menu shown before login (sign-in, sign-up, or a public page).' },
     { name: 'HELP_LOGO_REDIRECT', message: 'Menu id opened by a click on the top-nav logo.' },
@@ -61,8 +68,16 @@ foam.CLASS({
         ss.forEach(function(s) {
           var v = this.SECTION_VIEWS[s.name];
           if ( v ) s.view = v;
+          if ( s.name === 'colours' ) s.title = this.LEGACY_TAB;
           if ( s.name === 'navigation' ) s.view = { class: 'foam.u2.detail.SectionView', config: this.navigationHelp() };
         }.bind(this));
+        // The current theming system has no Theme section; give it a tab of its own after the legacy one.
+        var at = ss.findIndex(function(s) { return s.name === 'colours'; });
+        ss.splice(at + 1, 0, this.Section.create({
+          name: 'tokens',
+          title: this.TOKENS_TAB,
+          view: { class: 'com.foamdev.grammaticvisualizer.theme.ThemeTokensView' }
+        }));
         return ss;
       }
     }

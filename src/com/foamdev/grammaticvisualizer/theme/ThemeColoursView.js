@@ -10,28 +10,19 @@ foam.CLASS({
   extends: 'foam.u2.View',
 
   documentation: `
-    The Colours section of a Theme. Two halves:
-    1. the theme's own Color fields (primary1..5, grey1..5, black, white, ...)
-       as a swatch grid, one card per field, grouped by family. These are the
-       legacy CSS macros (/*%PRIMARY1%*/) that ApplicationController expands;
-       views written with $tokens never read them.
-    2. the theme's CSSTokenOverride rows, the mechanism that actually re-colours
-       token-based views per theme (TokenOverridesView), and under them the
-       catalogue of base tokens to pick from (TokenCatalogueView).
+    The Colours section of a Theme: the theme's own Color fields (primary1..5,
+    grey1..5, black, white, ...) as a swatch grid, one card per field, grouped
+    by family. These are the legacy CSS macros (/*%PRIMARY1%*/) that
+    ApplicationController expands; views written with $tokens never read them.
+    The current system lives on the CSS tokens tab (ThemeTokensView).
   `,
 
-  requires: [
-    'com.foamdev.grammaticvisualizer.theme.TokenCatalogueView',
-    'com.foamdev.grammaticvisualizer.theme.TokenOverridesView',
-    'foam.u2.ControllerMode'
-  ],
+  requires: [ 'foam.u2.ControllerMode' ],
 
   messages: [
     { name: 'LEGACY_TITLE', message: 'Legacy CSS macros' },
-    { name: 'LEGACY_HELP', message: 'These fields fill /*%PRIMARY1%*/-style macros in old CSS. Views built on $tokens ignore them; use the token overrides below for those.' },
-    { name: 'UNSET', message: 'unset' },
-    { name: 'TOKENS_TITLE', message: 'Token overrides' },
-    { name: 'CATALOGUE_TITLE', message: 'Token catalogue' }
+    { name: 'LEGACY_HELP', message: 'These fields fill /*%PRIMARY1%*/-style macros in old CSS. Views built on $tokens ignore them; recolour those on the CSS tokens tab.' },
+    { name: 'UNSET', message: 'unset' }
   ],
 
   css: `
@@ -93,19 +84,6 @@ foam.CLASS({
               .end()
             .end();
           });
-        }))
-        .add(this.slot(function(data) {
-          if ( ! data ) return;
-          var overrides = self.TokenOverridesView.create({ themeId: data.id }, self);
-          var catalogue = self.TokenCatalogueView.create({
-            theme: data,
-            onPick: function(name, light, dark) { overrides.copyFrom({ source: name, light: light, dark: dark }); }
-          }, self);
-          return this.E()
-            .start().addClass('h500').add(self.TOKENS_TITLE).end()
-            .add(overrides)
-            .start().addClass('h500').add(self.CATALOGUE_TITLE).end()
-            .add(catalogue);
         }));
     },
 

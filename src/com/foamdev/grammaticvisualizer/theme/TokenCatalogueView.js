@@ -59,7 +59,8 @@ foam.CLASS({
     <<search input { width: 16rem; }
     <<count { color: $textTertiary; }
     <<group { color: $textSecondary; margin-top: $space-2; }
-    <<table { width: 100%; border-collapse: collapse; }
+    <<table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    <<table th:first-child { width: 40%; }
     <<table th { text-align: left; padding: $space-1 $space-2; border-bottom: 1px solid $borderDefault; }
     <<table td { padding: $space-1 $space-2; border-bottom: 1px solid $borderLight; }
     <<row { cursor: pointer; }
