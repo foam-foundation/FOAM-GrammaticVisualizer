@@ -43,6 +43,11 @@ foam.CLASS({
       t.viewer.runToEnd();
       x.test(/✓/.test(t.viewer.status), 'and parses: ' + t.viewer.status.split('\n')[0]);
 
+      // Tab switches keep the viewer and its trace; the second Diagram open must not rebuild it.
+      var viewer = t.viewer, step = t.viewer.step;
+      t.mode = 'code'; await wait(20); t.mode = 'diagram'; await wait(50);
+      x.test(t.viewer === viewer && t.viewer.step === step && !! t.element_.querySelector('.foam-parse-rail-RailDiagramView'), 'Code → Diagram again keeps the same viewer at the same step');
+
       // A broken grammar reports instead of throwing.
       t.grammarText = '{ START: nope( }';
       t.compile();
