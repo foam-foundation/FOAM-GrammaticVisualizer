@@ -91,3 +91,16 @@ Open:
 - ~~Slider only moved on release.~~ Resolved: `Input.fromProperty` copied the
   property's `onKey` (false) over `RangeView`'s live default; the view spec now
   sets `onKey: true` (gap 14).
+
+## Later (noted 2026-10-12, not scheduled)
+
+- **Several previews, one grammar.** `RailDiagramView` holds one `input`/`trace`/`step`.
+  Doable without touching the engine: a `Session { input, trace, step }` list on the
+  view with a `current`; scene and transport follow `current`; each session owns a
+  `DocumentView`/ribbon. Useful for debugging several examples side by side.
+- **Preview abstraction for non-text sources (xlsx, csv, pdf).** The parser reads a
+  string and highlights are character offsets; `DocumentView` assumes lines and
+  columns. Needs `Source { text, mapOffset(pos) → location }` and a pluggable
+  preview (`TextPreview`, `GridPreview`, `PdfPreview`) that takes spans in its own
+  coordinates. `ParseTrace`, the scene and the derivation panel stay as they are.
+  CSV is text and already works.
