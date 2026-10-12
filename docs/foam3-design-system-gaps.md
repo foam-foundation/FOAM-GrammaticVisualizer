@@ -103,3 +103,34 @@ but outside the design system), **paper cut** (cost time, not design).
   that changes at runtime (play / pause) still needs a message beside the action.
 - **Workaround:** `label$` slot at the call site mapping to a message.
 - **Severity:** paper cut; documentation more than design.
+
+## 10. The app's input CSS swallows a range input
+
+- **Needed:** a slider (`foam.u2.RangeView`) in the trace panel.
+- **foam3:** `foam.u2.TextInputCSS` styles every `<input>` the same (height,
+  padding, border, background), so a `type=range` renders as a 13rem-tall blank
+  box and the native track disappears. `RangeView` carries no CSS of its own.
+- **Workaround:** `^slider input[type=range] { height: auto; padding: 0; border: none; background: none; appearance: auto; }`.
+- **Severity:** workaround. `RangeView` should opt out of the text-input CSS
+  (or `TextInputCSS` should scope itself to text-like types).
+
+## 11. A standalone page cannot get the app's typography from the core pom
+
+- **Needed:** `demo/index.html` (no `ApplicationController`) with the same
+  root font size and `p-*`/`h*` classes as the app, so one stylesheet fits both.
+- **foam3:** `foam.core.controller.Fonts` is listed in `foam/core/pom.js`, which
+  `foam3/src/pom.js` does not carry in source mode; `requires:` then resolves
+  to `undefined` and `tag()` fails with "Object prototype may only be an Object
+  or null". Nothing names the class a page must mount to get the base styles.
+- **Workaround:** a direct `<script src="../foam3/src/foam/core/controller/Fonts.js">`
+  and `this.tag(this.Fonts)` in the demo view.
+- **Severity:** paper cut. A `foam.u2.BaseStyles` (root size, body font, Fonts
+  classes) listed in the u2 pom would make any page's first line obvious.
+
+## 12. Dark mode reaches a page with no theme — through a default Theme
+
+- **Observed, not a gap:** the demo page has no app theme, yet once Fonts
+  loaded it followed the OS dark setting and the viewer flipped with it. The
+  root context carries a default `Theme` and `foam.lang.Window` drives its
+  `activeVariants.color` from `prefers-color-scheme`. Worth a line in the
+  CSSTokens guide: "every page gets dark mode; opt out with `useVariants: false`".
