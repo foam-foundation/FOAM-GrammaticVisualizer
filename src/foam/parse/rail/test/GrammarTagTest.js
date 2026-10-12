@@ -76,6 +76,28 @@ foam.CLASS({
       x.test(ex.viewer.input === 'abc' && /✓/.test(ex.viewer.status), 'the picker loads another input and parses it: ' + ex.viewer.status.split('\n')[0]);
       var sel = ex.element_.querySelector('.foam-parse-rail-GrammarTag-pick select');
       x.test(!! sel && sel.options.length === 3, 'the picker lists the inputs after a placeholder');
+
+      // All examples: one card per input, parsed to the end, with a document preview; a card click selects.
+      var cards = ex.element_.querySelectorAll('.foam-parse-rail-GrammarTag-card');
+      x.test(cards.length === 2, 'one card per input: ' + cards.length);
+      x.test(cards[0].querySelector('.ok') && cards[0].querySelector('.foam-parse-rail-DocumentView'), 'abc card: matched, with a document preview');
+      x.test(cards[1].querySelector('.fail'), '123 card: failed');
+      x.test(cards[0].classList.contains('foam-parse-rail-GrammarTag-active'), 'the active example is outlined');
+      cards[1].querySelector('.foam-parse-rail-GrammarTag-cardHead').click(); await wait(80);
+      x.test(ex.selected === '123' && ex.viewer.input === '123' && cards[1].classList.contains('foam-parse-rail-GrammarTag-active'), 'card click makes it the active example');
+
+      // Sessions: each card steps on its own; the active one and the viewer move together.
+      var s0 = ex.sessions[0], s1 = ex.sessions[1];
+      x.test(s0.matched && ! s1.matched && s0.step === s0.traceLength, 'sessions are parsed to the end: abc ✓, 123 ✗');
+      s0.stepBack();
+      x.test(s0.step === s0.traceLength - 1 && ex.viewer.input === '123', 'stepping the inactive abc card leaves the viewer on 123');
+      var before = s1.step;
+      ex.viewer.stepBack();
+      x.test(s1.step === before - 1 && s1.step === ex.viewer.step, 'stepping the viewer moves the active session: before ' + before + ' session ' + s1.step + ' viewer ' + ex.viewer.step + ' viewerInput ' + ex.viewer.input);
+      s1.restart();
+      x.test(ex.viewer.step === 0, 'stepping the active card moves the viewer');
+      ex.selected = 'abc'; await wait(80);
+      x.test(ex.viewer.input === 'abc' && ex.viewer.step === s0.step, 'selecting abc shows its session at its own step: session ' + s0.step + ' viewer ' + ex.viewer.step + ' input ' + ex.viewer.input);
       ex.remove();
 
       // input-from: the text comes from a block of the surrounding flow.

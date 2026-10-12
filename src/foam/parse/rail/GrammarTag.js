@@ -12,7 +12,10 @@ foam.CLASS({
   requires: [
     'foam.parse.Grammar',
     'foam.parse.StringPStream',
+    'foam.parse.rail.DocumentView',
+    'foam.parse.rail.ParseTrace',
     'foam.parse.rail.RailDiagramView',
+    'foam.parse.rail.Session',
     'foam.u2.memento.Memento',
     'foam.u2.view.ChoiceView',
     'foam.u2.view.TabChoiceView'
@@ -38,7 +41,11 @@ foam.CLASS({
     quote the attribute when an input holds a double quote) a table with one
     row per input: what the grammar parsed and the value it produced. Diagram:
     the railroad, with an Example picker that loads one of the inputs and
-    parses it to the end; clicking a table row does the same.
+    parses it to the end; clicking a table row does the same. Under the
+    viewer, one card per input is a Session of its own: a document preview
+    at that session's step and a small transport to move it, independent of
+    the others. Clicking a card makes it the viewer's session; the viewer and
+    the active card then step together.
 
     Works wherever foam.u2.view.MarkdownView renders: flows, knowledge base
     documents, by-example docs. The markdown is the persistence.
@@ -62,12 +69,28 @@ foam.CLASS({
     <<examples .rest { color: $textTertiary; }
     <<pick { display: flex; align-items: center; gap: $space-2; padding: $space-1 $space-2; border-bottom: 1px solid $borderLight; }
     <<pick .foam-u2-view-ChoiceView { flex: 0 1 30rem; }
+    <<cards { display: flex; flex-wrap: wrap; gap: $space-2; padding: $space-2; border-top: 1px solid $borderLight; }
+    <<card { flex: 1 1 24rem; max-width: 40rem; border: 1px solid $borderLight; border-radius: $inputBorderRadius; cursor: pointer; overflow: hidden; }
+    <<card:hover { border-color: $borderStrong; }
+    <<active { border-color: $primary500; box-shadow: 0 0 0 1px $primary500; }
+    <<cardHead { display: flex; gap: $space-2; align-items: baseline; padding: $space-1 $space-2; font-family: monospace; background: $backgroundSecondary; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+    <<cardHead .summary { color: $textTertiary; margin-left: auto; font-size: 1.1rem; white-space: nowrap; }
+    <<cardBar { display: flex; align-items: center; gap: $space-1; padding: $space-1 $space-2; border-top: 1px solid $borderXLight; }
+    <<cardBar .foam-u2-ActionView { padding-left: $space-1; padding-right: $space-1; }
+    <<cardBar .readout { margin-left: auto; font-family: monospace; color: $textTertiary; }
+    <<cards .ok   { color: $success500; }
+    <<cards .fail { color: $destructive500; }
+    <<card .foam-parse-rail-DocumentView { max-height: 12rem; }
+    <<cardNote { padding: $space-1 $space-2; color: $textTertiary; }
   `,
 
   messages: [
     { name: 'TAB_GRAMMAR',  message: 'Grammar' },
     { name: 'TAB_DIAGRAM',  message: 'Diagram' },
     { name: 'PICK_LABEL',   message: 'Example' },
+    { name: 'CARDS_TITLE',  message: 'All examples' },
+    { name: 'CARD_SKIPPED', message: 'preview skipped: input longer than 2000 chars' },
+    { name: 'CARD_HINT',    message: 'click a card to show it in the diagram' },
     { name: 'PICK_PLACEHOLDER', message: 'pick an input…' },
     { name: 'HINT',         message: 'body of a foam.parse symbols() function' },
     { name: 'COL_INPUT',    message: 'Input' },
@@ -129,6 +152,13 @@ foam.CLASS({
       postSet: function(_, n) { if ( n ) this.showExample(n); }
     },
     { class: 'String', name: 'error' },
+    {
+      name: 'sessions',
+      documentation: 'One Session per input, recorded when the Diagram tab opens and after a grammar edit. Each steps on its own; the selected one is mirrored in the viewer.',
+      factory: function() { return []; }
+    },
+    { name: 'activeSub_', documentation: 'Subscriptions tying the viewer and the active session together; replaced on every selection.' },
+    { class: 'String', name: 'compiledText_', documentation: 'The grammar text the viewer and sessions were built from; a tab switch with the same text keeps the trace.' },
     { name: 'viewer', documentation: 'The RailDiagramView, created the first time the Diagram tab opens and kept.' },
     { name: 'diagramEl', documentation: 'The box the viewer lives in; shown on the Diagram tab.' }
   ],
@@ -161,6 +191,10 @@ foam.CLASS({
             .start(this.SELECTED, { data$: this.selected$, placeholder: this.PICK_PLACEHOLDER, choices$: this.exampleInputs$.map(function(xs) { return xs.map(function(i) { return [ i, i === '' ? '(empty)' : i ]; }); }) }).end()
           .end()
           .start('div', null, this.diagramEl$).end()
+          // Every input parsed to the end, one card each; the active one is outlined.
+          .start('div').addClass(this.myClass('cards')).show(this.exampleInputs$.map(function(xs) { return xs.length > 0; }))
+            .add(this.dynamic(function(sessions) { self.renderCards(this, sessions); }))
+          .end()
         .end();
       this.onDetach(this.mode$.sub(this.onMode));
       this.onDetach(this.grammarText$.sub(this.recompile));
@@ -188,6 +222,66 @@ foam.CLASS({
       .end();
     },
 
+    function renderCards(e, sessions) {
+      var self = this;
+      sessions.forEach(function(ses) {
+        e.start('div').addClass(self.myClass('card')).enableClass(self.myClass('active'), self.selected$.map(function(sel) { return sel === ses.input; }))
+          .attrs({ title: self.CARD_HINT })
+          .start('div').addClass(self.myClass('cardHead')).addClass('p-sm').on('click', function() { self.selected = ses.input; })
+            .start('span').addClass(ses.matched ? 'ok' : 'fail').add(ses.matched ? '✓' : '✗').end()
+            .add(ses.input === '' ? '(empty)' : ses.input)
+            .start('span').addClass('summary').add(ses.summary$).end()
+          .end()
+          .callIf(!! ses.trace, function() {
+            this.add(self.DocumentView.create({ text: ses.input, snapshot$: ses.snapshot$ }, self))
+              // The card's own transport: this session moves without touching the others.
+              .start('div').addClass(self.myClass('cardBar')).addClass('p-sm')
+                .startContext({ data: ses })
+                  .start(ses.RESTART,  { size: 'SMALL' }).end()
+                  .start(ses.STEP_BACK, { size: 'SMALL' }).end()
+                  .start(ses.STEP_ONE,  { size: 'SMALL' }).end()
+                  .start(ses.RUN_TO_END, { size: 'SMALL' }).end()
+                .endContext()
+                .start('span').addClass('readout').add(ses.step$, ' / ', ses.traceLength$).end()
+              .end();
+          })
+          .callIf(! ses.trace, function() { this.start('div').addClass(self.myClass('cardNote')).addClass('p-sm').add(ses.error || self.CARD_SKIPPED).end(); })
+        .end();
+      });
+    },
+
+    function buildSessions() {
+      /** One Session per input, each parsed to the end with the grammar as written now. */
+      var self = this, grammar, start = this.viewer && this.viewer.startSymbol || 'START';
+      try { grammar = this.compileText(this.grammarText); } catch (x) { this.sessions = []; return; }
+      this.sessions = this.exampleInputs.map(function(input) {
+        var ses = self.Session.create({ input: input, grammar: grammar, startSymbol: start });
+        if ( input.length > 2000 ) { ses.error = self.CARD_SKIPPED; return ses; }
+        return ses.record();
+      });
+      this.activate(this.sessionFor(this.selected));
+    },
+
+    function sessionFor(input) {
+      return this.sessions.find(function(s) { return s.input === input; }) || null;
+    },
+
+    function activate(ses) {
+      /** The viewer shows this session; from here on the two step together until another is chosen. */
+      var self = this;
+      if ( this.activeSub_ ) { this.activeSub_.detach(); this.activeSub_ = null; }
+      if ( ! ses || ! this.viewer || ! ses.trace ) return;
+      this.viewer.setInput(ses.input);
+      this.viewer.trace = ses.trace;
+      this.viewer.show(ses.step);
+      var feedback = false;
+      var subs = foam.lang.FObject.create();
+      subs.onDetach(this.viewer.step$.sub(function() { if ( feedback ) return; feedback = true; ses.step = self.viewer.step; feedback = false; }));
+      subs.onDetach(ses.step$.sub(function() { if ( feedback ) return; feedback = true; self.viewer.show(ses.step); feedback = false; }));
+      this.activeSub_ = subs;
+      this.onDetach(subs);
+    },
+
     function describe(v) {
       /** A parse value as the tutorial's tables show it: strings quoted, arrays and objects as JSON. */
       try { return v === undefined ? 'undefined' : JSON.stringify(v); } catch (x) { return String(v); }
@@ -200,10 +294,13 @@ foam.CLASS({
     },
 
     function showExample(input) {
-      /** One of the inputs in the diagram, parsed to the end (a table row or the picker chose it). */
+      /** One of the inputs in the diagram (a table row, the picker or a card chose it): its session, at its step. */
       this.input = input;
       this.mode = 'diagram';
-      if ( this.viewer ) { this.compile(); this.viewer.runToEnd(); }
+      if ( ! this.viewer ) return;
+      var ses = this.sessionFor(input);
+      if ( ses ) this.activate(ses);
+      else { this.compile(); this.viewer.runToEnd(); }
     },
 
     function add() {
@@ -231,10 +328,12 @@ foam.CLASS({
       /** The Diagram tab shows the grammar as written now; a compile error is shown in place of the diagram's status. */
       if ( ! this.viewer ) return;
       this.error = '';
+      this.compiledText_ = this.grammarText;
       var input = this.resolveInput();
       if ( input !== null ) this.viewer.setInput(input);
       try { this.viewer.useGrammar(this.compileText(this.grammarText)); }
       catch (x) { this.error = 'grammar error: ' + ( x.message || x ); this.viewer.useGrammar(null); }
+      this.buildSessions();
     }
   ],
 
@@ -245,7 +344,8 @@ foam.CLASS({
         this.viewer = this.RailDiagramView.create({ compact: true }, this);
         this.diagramEl.add(this.viewer);
       }
-      this.compile();
+      // Same text as last time: keep the trace the user was stepping through.
+      if ( this.compiledText_ !== this.grammarText ) this.compile();
     },
 
     {

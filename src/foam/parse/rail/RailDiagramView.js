@@ -632,8 +632,8 @@ foam.CLASS({
       if ( ! this.trace ) return;
       var snap = this.trace.at(n);
       this.feedback_ = true;
+      this.traceLength = snap.total;   // before step: the slider clamps step to its max
       this.step = snap.step;
-      this.traceLength = snap.total;
       this.feedback_ = false;
       this.scene.applyTrace(snap);
       this.ribbon.snapshot = snap;
