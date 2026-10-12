@@ -221,7 +221,8 @@ foam.CLASS({
       class: 'Int',
       name: 'step',
       documentation: 'Position in the trace. The slider binds to it; show() keeps it in step with the snapshot shown.',
-      view: { class: 'foam.u2.RangeView', minValue: 0, step: 1 },
+      // onKey: Input.fromProperty copies the property's onKey (false) over RangeView's live default, so say it here.
+      view: { class: 'foam.u2.RangeView', minValue: 0, step: 1, onKey: true },
       postSet: function(_, n) { if ( this.feedback_ ) return; this.stopPlay(); this.show(n); }
     },
     { class: 'Int', name: 'traceLength', documentation: 'Length of the trace, 0 without one; the slider maximum.' },
