@@ -65,7 +65,7 @@ foam.CLASS({
       await wait(300);
       console.warn = origWarn;
       x.test(detached === 0, 'the tabs render once, nothing is added to a detached tree: ' + detached);
-      x.test(tabLabels.indexOf('Colours') < 0 && tabLabels.indexOf('Legacy CSS') < 0 && tabLabels.indexOf('CSS tokens') === 2 && tabLabels.indexOf('Icons / Images') >= 0 && tabLabels.indexOf('Inputs') >= 0, 'one tab per Theme section: ' + tabLabels.join(', '));
+      x.test(tabLabels.indexOf('Colours') < 0 && tabLabels.indexOf('Legacy CSS') < 0 && tabLabels.indexOf('CSS tokens') === 1 && tabLabels.indexOf('CSS') < 0 && tabLabels.indexOf('Custom CSS') > tabLabels.indexOf('Inputs') && tabLabels.indexOf('Icons / Images') === 2, 'tabs renamed and ordered by use: ' + tabLabels.join(', '));
 
       // CSS tokens tab. Overrides: this theme's rows only; add through the form; remove through the row action.
       await select('CSS tokens', function() { return root.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row').length > 0; });
@@ -92,7 +92,16 @@ foam.CLASS({
       var cat = function() { return root.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView'); };
       x.test(!! cat(), 'the CSS tokens tab hosts the catalogue');
       var catRows = function() { return cat().querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-row'); };
-      x.test(catRows().length >= 200, 'lists the base tokens: ' + catRows().length);
+      x.test(catRows().length >= 150, 'lists the base tokens: ' + catRows().length);
+      var blue = function() { return Array.from(catRows()).some(function(r) { return r.querySelector('td').textContent === '$blue500'; }); };
+      x.test(! blue(), 'the palette ramps start folded');
+      var chips = cat().querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-chip');
+      x.test(chips.length >= 8 && Array.from(chips).some(function(c) { return /Palette ramps/.test(c.textContent); }), 'the search row carries a jump chip per group: ' + chips.length);
+      Array.from(chips).find(function(c) { return /Palette ramps/.test(c.textContent); }).click();
+      await wait(50);
+      x.test(blue(), 'jumping to a folded group unfolds it');
+      var sticky = getComputedStyle(cat().querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-search')).position;
+      x.test(sticky === 'sticky', 'the search row is sticky: ' + sticky);
       var p500 = Array.from(catRows()).find(function(r) { return r.querySelector('td').textContent === '$primary500'; });
       x.test(!! p500, 'primary500 is listed');
       var vals = p500 && Array.from(p500.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-value')).map(function(e) { return e.textContent; });
@@ -125,6 +134,13 @@ foam.CLASS({
       x.test(pb && pb.width <= bb.width + 1 && pb.height <= bb.height + 1 && bb.width < 400, 'the picture is bounded by the box: ' + (pb && Math.round(pb.width) + 'x' + Math.round(pb.height)) + ' in ' + Math.round(bb.width) + 'x' + Math.round(bb.height));
       x.test(boxes[1].classList.contains('dark'), 'the second box is the dark surface');
       x.test(root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeImagesView-card textarea').length >= 5, 'each image has its value editor');
+      var ta = root.querySelector('.com-foamdev-grammaticvisualizer-theme-ThemeImagesView-card textarea');
+      x.test(ta.getBoundingClientRect().height <= 60, 'the value box starts one line tall: ' + Math.round(ta.getBoundingClientRect().height));
+      x.test(/Logo/.test(root.querySelector('.com-foamdev-grammaticvisualizer-theme-ThemeImagesView-cardTitle').textContent), 'the field name titles the card');
+
+      // Navigation: the side-nav view spec gets a code box.
+      await select('Navigation', function() { return !! root.querySelector('textarea[name=sideNav]'); });
+      x.test(!! root.querySelector('textarea[name=sideNav]'), 'sideNav is edited in a textarea');
 
       // Inputs: fields with help plus a live sample at the theme's height.
       await select('Inputs', function() { return !! root.querySelector('.com-foamdev-grammaticvisualizer-theme-InputSizingView-sample'); });

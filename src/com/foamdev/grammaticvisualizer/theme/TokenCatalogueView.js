@@ -31,6 +31,7 @@ foam.CLASS({
     { name: 'COL_LIGHT', message: 'Light' },
     { name: 'COL_DARK', message: 'Dark' },
     { name: 'NO_MATCH', message: 'No token matches.' },
+    { name: 'COLLAPSED_HINT', message: 'click to show' },
     { name: 'TOKENS_WORD', message: 'tokens' }
   ],
 
@@ -55,10 +56,15 @@ foam.CLASS({
   css: `
     << { display: flex; flex-direction: column; gap: $space-2; }
     <<help { color: $textSecondary; }
-    <<search { display: flex; align-items: center; gap: $space-2; }
+    /* The search row stays put while the 260 rows scroll under it; the chips jump to a group. */
+    <<search { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: $space-2; padding: $space-1 0; background: $backgroundDefault; border-bottom: 1px solid $borderLight; }
     <<search input { width: 16rem; }
+    <<chip { cursor: pointer; padding: 0 $space-2; border: 1px solid $borderLight; border-radius: $radius-full; color: $textSecondary; }
+    <<chip:hover { background: $backgroundHover; }
+    <<group { color: $textSecondary; margin-top: $space-2; cursor: pointer; }
+    <<group:hover { color: $textDefault; }
+    <<caret { display: inline-block; width: 1.2rem; }
     <<count { color: $textTertiary; }
-    <<group { color: $textSecondary; margin-top: $space-2; }
     <<table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     <<table th:first-child { width: 40%; }
     <<table th { text-align: left; padding: $space-1 $space-2; border-bottom: 1px solid $borderDefault; }
@@ -85,6 +91,12 @@ foam.CLASS({
       class: 'Function',
       name: 'onPick',
       value: function(name, light, dark) {}
+    },
+    {
+      class: 'Map',
+      name: 'collapsed',
+      documentation: 'Groups folded to a heading. The palette ramps start folded: reference, not choices. A search unfolds everything it matches.',
+      factory: function() { return { 'Palette ramps': true }; }
     },
     {
       name: 'tokens',
@@ -156,13 +168,47 @@ foam.CLASS({
                 return groups.reduce(function(n, g) { return n + g.tokens.length; }, 0) + ' ' + self.TOKENS_WORD;
               }))
             .end()
+            .add(this.slot(function(groups) {
+              return this.E().forEach(groups, function(g) {
+                this.start('span').addClass('p-sm', self.myClass('chip')).add(g.name)
+                  .on('click', function() { self.jumpTo(g.name); })
+                .end();
+              });
+            }))
           .end()
         .endContext()
-        .add(this.slot(function(groups) {
+        .add(this.slot(function(groups, filter, collapsed) {
           if ( ! groups.length ) return this.E().addClass('p', self.myClass('empty')).add(self.NO_MATCH);
           return this.E().forEach(groups, function(g) {
-            this.start().addClass('p-label', self.myClass('group')).add(g.name).end()
-              .start('table').addClass(self.myClass('table'))
+            var folded = ! filter.trim() && !! collapsed[g.name];
+            this.start().addClass('p-label', self.myClass('group')).attrs({ 'data-group': g.name })
+                .on('click', function() { self.toggle(g.name); })
+                .start('span').addClass(self.myClass('caret')).add(folded ? '▸' : '▾').end()
+                .add(g.name, ' ')
+                .start('span').addClass(self.myClass('count')).add(g.tokens.length + ( folded ? ' · ' + self.COLLAPSED_HINT : '' )).end()
+              .end()
+              .callIf(folded, function() { return; })
+              .callIf(! folded, function() { self.renderTable(this, g); });
+          });
+        }));
+    },
+
+    function toggle(name) {
+      var c = Object.assign({}, this.collapsed);
+      c[name] = ! c[name];
+      this.collapsed = c;
+    },
+
+    function jumpTo(name) {
+      var c = Object.assign({}, this.collapsed);
+      if ( c[name] ) { c[name] = false; this.collapsed = c; }
+      var el = this.element_ && this.element_.querySelector('[data-group="' + name + '"]');
+      if ( el ) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    },
+
+    function renderTable(e, g) {
+      var self = this;
+      e.start('table').addClass(self.myClass('table'))
                 .start('thead').start('tr')
                   .start('th').add(self.COL_NAME).end()
                   .start('th').add(self.COL_LIGHT).end()
@@ -177,8 +223,6 @@ foam.CLASS({
                   .end();
                 }).end()
               .end();
-          });
-        }));
     },
 
     function renderValue(td, t, v) {
