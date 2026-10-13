@@ -27,6 +27,7 @@ foam.CLASS({
 
   messages: [
     { name: 'HELP', message: 'Base tokens from foam.u2.CSSTokens, resolved for this theme. Click a row to prefill the override form.' },
+    { name: 'HELP_RO', message: 'Base tokens from foam.u2.CSSTokens, resolved for this theme. Press Edit to add overrides.' },
     { name: 'COL_NAME', message: 'Token' },
     { name: 'COL_LIGHT', message: 'Light' },
     { name: 'COL_DARK', message: 'Dark' },
@@ -69,8 +70,8 @@ foam.CLASS({
     <<table th:first-child { width: 40%; }
     <<table th { text-align: left; padding: $space-1 $space-2; border-bottom: 1px solid $borderDefault; }
     <<table td { padding: $space-1 $space-2; border-bottom: 1px solid $borderLight; }
-    <<row { cursor: pointer; }
-    <<row:hover { background: $backgroundHover; }
+    <<pickable { cursor: pointer; }
+    <<pickable:hover { background: $backgroundHover; }
     <<token { font-family: monospace; }
     <<value { font-family: monospace; color: $textSecondary; }
     <<swatch { display: inline-block; width: 1rem; height: 1rem; border-radius: $radius; border: 1px solid $borderLight; vertical-align: middle; margin-right: $space-1; }
@@ -86,6 +87,12 @@ foam.CLASS({
       class: 'String',
       name: 'filter',
       view: { class: 'foam.u2.TextField', placeholder: 'Search tokens', onKey: true }
+    },
+    {
+      class: 'Boolean',
+      name: 'editable',
+      documentation: 'Rows prefill the override form only while the theme is being edited.',
+      value: true
     },
     {
       class: 'Function',
@@ -159,10 +166,12 @@ foam.CLASS({
     function render() {
       var self = this;
       this.addClass(this.myClass())
-        .start().addClass('p', this.myClass('help')).add(this.HELP).end()
+        .start().addClass('p', this.myClass('help')).add(this.editable$.map(function(e) { return e ? self.HELP : self.HELP_RO; })).end()
         .startContext({ data: this })
           .start().addClass(this.myClass('search'))
             .add(this.FILTER)
+            .start(this.EXPAND_ALL, { buttonStyle: 'LINK', size: 'SMALL' }).end()
+            .start(this.COLLAPSE_ALL, { buttonStyle: 'LINK', size: 'SMALL' }).end()
             .start('span').addClass('p-sm', this.myClass('count'))
               .add(this.slot(function(groups) {
                 return groups.reduce(function(n, g) { return n + g.tokens.length; }, 0) + ' ' + self.TOKENS_WORD;
@@ -193,6 +202,13 @@ foam.CLASS({
         }));
     },
 
+    function setAll(folded) {
+      var c = {};
+      this.GROUP_RULES.forEach(function(g) { c[g[0]] = folded; });
+      c['Other'] = folded;
+      this.collapsed = c;
+    },
+
     function toggle(name) {
       var c = Object.assign({}, this.collapsed);
       c[name] = ! c[name];
@@ -215,8 +231,8 @@ foam.CLASS({
                   .start('th').add(self.COL_DARK).end()
                 .end().end()
                 .start('tbody').forEach(g.tokens, function(t) {
-                  this.start('tr').addClass(self.myClass('row'))
-                    .on('click', function() { self.onPick(t.name, t.light, t.dark); })
+                  this.start('tr').addClass(self.myClass('row')).enableClass(self.myClass('pickable'), self.editable$)
+                    .on('click', function() { if ( self.editable ) self.onPick(t.name, t.light, t.dark); })
                     .start('td').addClass(self.myClass('token')).add('$' + t.name).end()
                     .start('td').call(function() { self.renderValue(this, t, t.light); }).end()
                     .start('td').call(function() { self.renderValue(this, t, t.dark); }).end()
@@ -229,5 +245,10 @@ foam.CLASS({
       if ( t.isColor && v ) td.start('span').addClass(this.myClass('swatch')).style({ 'background-color': v }).end();
       td.start('span').addClass(this.myClass('value')).add(v).end();
     }
+  ],
+
+  actions: [
+    { name: 'expandAll',   label: 'expand all',   code: function() { this.setAll(false); } },
+    { name: 'collapseAll', label: 'collapse all', code: function() { this.setAll(true); } }
   ]
 });

@@ -102,6 +102,11 @@ foam.CLASS({
       x.test(blue(), 'jumping to a folded group unfolds it');
       var sticky = getComputedStyle(cat().querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-search')).position;
       x.test(sticky === 'sticky', 'the search row is sticky: ' + sticky);
+      var catBtn = function(re) { return Array.from(cat().querySelectorAll('.foam-u2-ActionView')).find(function(b) { return re.test(b.textContent); }); };
+      catBtn(/collapse all/).click(); await wait(50);
+      x.test(catRows().length === 0 && cat().querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-group').length >= 9, 'collapse all folds every group to its heading: ' + catRows().length);
+      catBtn(/expand all/).click(); await wait(50);
+      x.test(catRows().length >= 250 && blue(), 'expand all shows every row: ' + catRows().length);
       var p500 = Array.from(catRows()).find(function(r) { return r.querySelector('td').textContent === '$primary500'; });
       x.test(!! p500, 'primary500 is listed');
       var vals = p500 && Array.from(p500.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-value')).map(function(e) { return e.textContent; });
@@ -149,6 +154,24 @@ foam.CLASS({
       theme.inputHeight = '48px';
       await wait(50);
       x.test(sample.getBoundingClientRect().height === 48, 'the sample follows the field');
+
+      // ControllerMode: in VIEW the overrides are read-only (no form, no remove, rows not pickable); EDIT has them.
+      var yv = x.createSubContext({ controllerMode: this.ControllerMode.VIEW, cssTokenOverrideDAO: dao });
+      var vv = this.ThemeDetailView.create({ data: theme, of: this.Theme }, yv);
+      vv.write();
+      var rootV = vv.element_;
+      await until(function() { return rootV.querySelectorAll('.foam-u2-SegmentedTabs-tabRow > *').length >= 9; });
+      Array.from(rootV.querySelectorAll('.foam-u2-SegmentedTabs-tabRow > *')).find(function(e) { return e.textContent.trim() === 'CSS tokens'; }).click();
+      await until(function() { return rootV.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row').length > 0; });
+      var shown = function(el) { return !! el && el.getClientRects().length > 0; };
+      x.test(! shown(rootV.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-form')), 'VIEW mode: no add form');
+      x.test(! shown(rootV.querySelector('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row .foam-u2-ActionView')), 'VIEW mode: no remove action on rows');
+      x.test(! rootV.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-pickable'), 'VIEW mode: catalogue rows are not pickable');
+      x.test(/Press Edit/.test(rootV.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-help').textContent), 'VIEW mode: the help says to press Edit');
+      // The EDIT view sits on another tab now, so test presence and the display rule rather than client rects.
+      var editForm = root.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-form');
+      x.test(!! editForm && getComputedStyle(editForm).display !== 'none' && !! root.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-pickable'), 'EDIT mode: form and pickable rows');
+      vv.remove();
 
       // Chrome rule: every button and input is a u2 view.
       var rawButtons = Array.from(root.querySelectorAll('button')).filter(function(b) { return ! /foam-u2-ActionView/.test(b.className); });
