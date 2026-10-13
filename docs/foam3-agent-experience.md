@@ -130,3 +130,12 @@ screens that name it (`ThemeCustomisationBrowseController`, `DataManagement`,
 Theme menu throws `Cannot read properties of undefined (reading 'length')` on open, in
 every app, with nothing in CI to say so. Found by clicking. Guarded with `?.` here; the
 real fix is a smoke test that opens every menu in `menus.jrl` once.
+
+## 13. Client tests stall silently while another app instance is running
+
+`./build.sh -N<name> -W8091 client-tests:...` launches its own headless Chrome with
+`--remote-debugging-port=9222`. With a second instance of the app running on another
+port (started with `./build.sh -Jdemo -N<other> -W8090` for a manual check), the test
+page comes up on the login form, no test runs, and after 30s the runner prints only
+"Client tests made no progress ... after 1 results". Nothing names the clash. Stop the
+other instance first. Cost: forty minutes chasing a view "bug" that did not exist.
