@@ -31,7 +31,7 @@ foam.CLASS({
     { name: 'COL_LIGHT', message: 'Light' },
     { name: 'COL_DARK', message: 'Dark' },
     { name: 'NO_MATCH', message: 'No token matches.' },
-    { name: 'COUNT', message: 'tokens' }
+    { name: 'TOKENS_WORD', message: 'tokens' }
   ],
 
   constants: [
@@ -153,7 +153,7 @@ foam.CLASS({
             .add(this.FILTER)
             .start('span').addClass('p-sm', this.myClass('count'))
               .add(this.slot(function(groups) {
-                return groups.reduce(function(n, g) { return n + g.tokens.length; }, 0) + ' ' + self.COUNT;
+                return groups.reduce(function(n, g) { return n + g.tokens.length; }, 0) + ' ' + self.TOKENS_WORD;
               }))
             .end()
           .end()

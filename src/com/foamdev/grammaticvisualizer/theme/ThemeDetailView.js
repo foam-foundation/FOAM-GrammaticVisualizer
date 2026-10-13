@@ -90,27 +90,36 @@ foam.CLASS({
     }
   ],
 
-  listeners: [
-    {
-      name: 'updateVis',
-      documentation: `
-        TabbedDetailView merges this with a 100ms delay, so its first render uses an
-        empty visibility list (every section), then renders again once the list
-        arrives. The first tree is thrown away while async views in it (FObjectView
-        for appConfig awaits its choices) are still rendering, which logs forty
-        "add child to detached parent" warnings and, on Edit, throws from
-        FObjectView.render. Theme's sections resolve synchronously, so apply the
-        list at once and render only once.
-      `,
-      code: function() {
-        if ( ! foam.util.equals(this.stableVisibilities_, this.visibilityArray_) ) {
-          this.stableVisibilities_ = this.visibilityArray_;
-        }
-      }
-    }
-  ],
-
   methods: [
+    function render() {
+      /**
+       * TabbedDetailView rebuilds its whole tab tree every time a section's availability
+       * settles (updateVis is merged, 100ms), and availability waits on one permission check
+       * per property; for Theme that is ~50 round trips, so the tree is rebuilt several times
+       * over a few seconds, async views mid-render in a discarded tree throw (FObjectView on
+       * Edit), and the console fills with "add child to detached parent". No Theme section is
+       * permission-gated, and a section with nothing to show hides its own body, so this view
+       * renders every section once and never rebuilds.
+       */
+      var self = this;
+      foam.u2.detail.AbstractSectionedDetailView.prototype.render.call(this);
+      // Both class names: TabbedDetailView's CSS keys on its own.
+      this.addClass(this.myClass(), 'foam-u2-detail-TabbedDetailView')
+        .add(this.slot(function(sections) {
+          var titled = sections.filter(function(s) { return s.title; });
+          return self.E().start(self.CardBorder).addClass('foam-u2-detail-TabbedDetailView-tab-wrapper')
+            .start(self.Tabs, {}, self.tabs$)
+              .forEach(titled, function(s) {
+                var tab = foam.lang.SimpleSlot.create({}, self);
+                this.start(self.Tab, { label: s.title }, tab)
+                  .tag(s.view, { data$: self.data$, of$: self.of$, section: s, showTitle: false, selected$: tab.value.selected$ })
+                .end();
+              })
+            .end()
+          .end();
+        }));
+    },
+
     function navigationHelp() {
       return {
         defaultMenu:                { help: this.HELP_DEFAULT_MENU },

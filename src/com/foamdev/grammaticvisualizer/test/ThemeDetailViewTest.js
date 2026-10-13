@@ -27,6 +27,12 @@ foam.CLASS({
 
   methods: [
     async function runTest(x) {
+      // A throw inside the body would lose every result already recorded; report it as one failure instead.
+      try { await this.runTest_(x); }
+      catch (e) { x.test(false, 'test body threw: ' + (e && e.stack || e)); }
+    },
+
+    async function runTest_(x) {
       var wait  = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };
       // Section visibility and slot rendering settle asynchronously; poll instead of guessing a delay.
       var until = async function(fn, ms) {
@@ -43,8 +49,9 @@ foam.CLASS({
       // The tabs must render once: count foam's "detached parent" warnings while the view settles.
       var detached = 0, origWarn = console.warn;
       console.warn = function(m) { if ( /detached parent/.test(String(m)) ) detached++; origWarn.apply(console, arguments); };
-      var v = this.ThemeDetailView.create({ data: theme, of: this.Theme }, y);
-      v.write();
+      var v;
+      try { v = this.ThemeDetailView.create({ data: theme, of: this.Theme }, y); v.write(); }
+      catch (e) { x.test(false, 'the view renders: ' + (e.stack || e)); console.warn = origWarn; return; }
       var root = v.element_;
       var tabEls = function() { return Array.from(root.querySelectorAll('.foam-u2-SegmentedTabs-tabRow > *')); };
       await until(function() { return tabEls().length >= 10; });
