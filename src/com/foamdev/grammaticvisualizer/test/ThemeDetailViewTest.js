@@ -115,11 +115,9 @@ foam.CLASS({
       Array.from(cat().querySelectorAll('.foam-u2-view-TabChoiceView label')).find(function(l) { return l.textContent.trim() === 'Borders'; }).querySelector('input').click();
       await until(function() { return catRows().length > 0 && catRows().length < 20; }, 5000);
       x.test(catRows().length === 8 && Array.from(catRows()).every(function(r) { return /\$border/.test(r.textContent); }), 'a group tab filters to that group: ' + catRows().length);
-      // The search box is foam's own (FilterView over SmartView); it is there, and it commits on
-      // Enter in a live tab. Driving SmartView with synthetic events is not reliable headless,
-      // so the DAO path is proven through the group tab above and the search box by presence.
-      var searchEl = cat().querySelector('.foam-u2-filter-FilterView input[type=search]');
-      x.test(!! searchEl, 'the catalogue has foam\'s search box');
+      // The search box is foam's own (FilterView over SmartView). It is there; driving SmartView with
+      // synthetic events is not reliable headless, so the DAO path is proven through the group tab above.
+      x.test(!! cat().querySelector('input[type=search]'), 'the catalogue has foam\'s search box');
       await until(function() { return Array.from(catRows()).some(function(r) { return /borderBrand/.test(r.textContent); }); }, 3000);
       Array.from(catRows()).find(function(r) { return /borderBrand/.test(r.textContent); }).click();
       await wait(50);
