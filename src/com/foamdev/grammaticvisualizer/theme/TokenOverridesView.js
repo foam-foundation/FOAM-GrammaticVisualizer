@@ -73,6 +73,12 @@ foam.CLASS({
   properties: [
     { class: 'String', name: 'themeId' },
     {
+      class: 'Boolean',
+      name: 'editable',
+      documentation: 'Add form and per-row remove shown only while the theme is being edited.',
+      value: true
+    },
+    {
       class: 'Array',
       name: 'rows',
       documentation: 'CSSTokenOverride rows for themeId, refreshed on every DAO event.'
@@ -124,12 +130,12 @@ foam.CLASS({
                 .start('td').call(function() { self.renderValue(this, o.target); }).end()
                 .start('td').call(function() { self.renderValue(this, o.variants && o.variants.dark); }).end()
                 .start('td').add(o.enabled ? '✓' : self.DASH).end()
-                .start('td').startContext({ data: row }).add(row.REMOVE).endContext().end()
+                .start('td').show(self.editable$).startContext({ data: row }).add(row.REMOVE).endContext().end()
               .end();
             }).end();
         }))
         .startContext({ data: this })
-          .start().addClass(this.myClass('form'))
+          .start().addClass(this.myClass('form')).show(this.editable$)
             .call(function() { self.renderCell(this, self.COL_SOURCE, self.SOURCE); })
             .call(function() { self.renderCell(this, self.COL_LIGHT, self.LIGHT); })
             .call(function() { self.renderCell(this, self.COL_DARK, self.DARK); })
@@ -158,6 +164,7 @@ foam.CLASS({
       name: 'addOverride',
       label: 'Add override',
       buttonStyle: 'PRIMARY',
+      isAvailable: function(editable) { return editable; },
       isEnabled: function(source, light, dark) { return !! source.trim() && !! ( light || dark ); },
       code: async function() {
         var o = this.CSSTokenOverride.create({

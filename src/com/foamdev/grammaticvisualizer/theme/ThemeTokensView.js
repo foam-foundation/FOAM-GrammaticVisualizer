@@ -18,7 +18,8 @@ foam.CLASS({
 
   requires: [
     'com.foamdev.grammaticvisualizer.theme.TokenCatalogueView',
-    'com.foamdev.grammaticvisualizer.theme.TokenOverridesView'
+    'com.foamdev.grammaticvisualizer.theme.TokenOverridesView',
+    'foam.u2.ControllerMode'
   ],
 
   messages: [
@@ -36,19 +37,28 @@ foam.CLASS({
     'section',
     'of',
     { class: 'Boolean', name: 'showTitle' },
-    { class: 'Boolean', name: 'selected' }
+    { class: 'Boolean', name: 'selected' },
+    {
+      class: 'Boolean',
+      name: 'editable',
+      documentation: 'Overrides may be added or removed only while the record is being edited (ControllerMode EDIT or CREATE); VIEW is read-only, as the mode guide requires.',
+      expression: function(controllerMode) { return controllerMode !== this.ControllerMode.VIEW; }
+    }
   ],
 
   methods: [
     function render() {
       var self = this;
+      // foam.u2.View's controllerMode is a property; keep it on the context's, as SectionView does.
+      if ( this.__subContext__.controllerMode$ ) this.controllerMode$.follow(this.__subContext__.controllerMode$);
       this.addClass(this.myClass())
         .start().addClass('p', this.myClass('help')).add(this.HELP).end()
         .add(this.slot(function(data) {
           if ( ! data ) return;
-          var overrides = self.TokenOverridesView.create({ themeId: data.id }, self);
+          var overrides = self.TokenOverridesView.create({ themeId: data.id, editable$: self.editable$ }, self);
           var catalogue = self.TokenCatalogueView.create({
             theme: data,
+            editable$: self.editable$,
             onPick: function(name, light, dark) { overrides.copyFrom({ source: name, light: light, dark: dark }); }
           }, self);
           return this.E()
