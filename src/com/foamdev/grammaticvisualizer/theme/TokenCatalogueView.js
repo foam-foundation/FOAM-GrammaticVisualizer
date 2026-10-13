@@ -64,6 +64,9 @@ foam.CLASS({
     << { display: flex; flex-direction: column; gap: $space-2; }
     <<help { color: $textSecondary; }
     <<search { max-width: 24rem; }
+    /* The table scrolls inside a bounded box; unbounded, LazyScrollManager has no scroll container
+       and lays out every row (14,000px for 250 tokens) and the whole page scrolls instead. */
+    << .foam-comics-v2-DAOBrowserView { height: 60vh; min-height: 32rem; }
     <<pickable .foam-u2-table-TableView-tbody .foam-u2-table-TableView-tr { cursor: pointer; }
     /* Cells drawn by TokenValueFormatter (TokenRow.js). */
     <<swatch { display: inline-block; width: 1rem; height: 1rem; border-radius: $radius; border: 1px solid $borderLight; vertical-align: middle; margin-right: $space-1; }
