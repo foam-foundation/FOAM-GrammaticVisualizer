@@ -131,11 +131,14 @@ Theme menu throws `Cannot read properties of undefined (reading 'length')` on op
 every app, with nothing in CI to say so. Found by clicking. Guarded with `?.` here; the
 real fix is a smoke test that opens every menu in `menus.jrl` once.
 
-## 13. Client tests stall silently while another app instance is running
+## 13. Client tests stall silently when the test port is still held
 
-`./build.sh -N<name> -W8091 client-tests:...` launches its own headless Chrome with
-`--remote-debugging-port=9222`. With a second instance of the app running on another
-port (started with `./build.sh -Jdemo -N<other> -W8090` for a manual check), the test
-page comes up on the login form, no test runs, and after 30s the runner prints only
-"Client tests made no progress ... after 1 results". Nothing names the clash. Stop the
-other instance first. Cost: forty minutes chasing a view "bug" that did not exist.
+`./build.sh -N<name> -W8091 client-tests:...` starts a server on 8091 and a headless
+Chrome against it. If a java process from an earlier run still holds 8091 (a run that
+was interrupted, or a test instance that never shut down), the new server fails to
+bind, nothing says so, and the browser opens the old instance with a session id it
+does not know: the test page is the login form, no test runs, and after 30s the only
+output is "Client tests made no progress ... after 1 results". `lsof -nP -iTCP:8091
+-sTCP:LISTEN` shows the squatter. Cost: an hour chasing a view "bug" that did not
+exist, including a wrong first diagnosis (another app instance on 8090). The runner
+should refuse to start when its port is taken.

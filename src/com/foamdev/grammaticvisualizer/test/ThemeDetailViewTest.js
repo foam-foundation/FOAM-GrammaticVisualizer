@@ -19,8 +19,8 @@ foam.CLASS({
   ],
 
   documentation: `
-    The Theme detail screen: one tab per section; Colours shows a swatch per
-    colour field plus the theme's token overrides; Icons / Images keeps every
+    The Theme detail screen: one tab per section, minus the legacy Colours
+    one; CSS tokens holds the theme's overrides and the catalogue; Icons / Images keeps every
     picture inside its preview box; Inputs shows a sample at the given sizes;
     every control is a u2 view.
   `,
@@ -54,7 +54,7 @@ foam.CLASS({
       catch (e) { x.test(false, 'the view renders: ' + (e.stack || e)); console.warn = origWarn; return; }
       var root = v.element_;
       var tabEls = function() { return Array.from(root.querySelectorAll('.foam-u2-SegmentedTabs-tabRow > *')); };
-      await until(function() { return tabEls().length >= 10; });
+      await until(function() { return tabEls().length >= 9; });
       var tabLabels = tabEls().map(function(e) { return e.textContent.trim(); });
       var select = async function(label, readyFn) {
         var tab = tabEls().find(function(e) { return e.textContent.trim() === label; });
@@ -65,21 +65,7 @@ foam.CLASS({
       await wait(300);
       console.warn = origWarn;
       x.test(detached === 0, 'the tabs render once, nothing is added to a detached tree: ' + detached);
-      x.test(tabLabels.indexOf('Legacy CSS') >= 0 && tabLabels.indexOf('CSS tokens') === tabLabels.indexOf('Legacy CSS') + 1 && tabLabels.indexOf('Icons / Images') >= 0 && tabLabels.indexOf('Inputs') >= 0, 'one tab per Theme section: ' + tabLabels.join(', '));
-
-      // Colours: a card per colour field, the swatch carries the value, unset ones say so.
-      await select('Legacy CSS', function() { return root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeColoursView-card').length > 0; });
-      var cards = root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeColoursView-card');
-      x.test(cards.length >= 30, 'a swatch card per colour field: ' + cards.length);
-      var p1 = Array.from(cards).find(function(c) { return /primary1\b/i.test(c.textContent) || /Primary 1/.test(c.textContent); });
-      x.test(!! p1, 'primary1 has a card');
-      var sw = p1 && p1.querySelector('.com-foamdev-grammaticvisualizer-theme-ThemeColoursView-swatch');
-      x.test(sw && /255, 0, 0/.test(getComputedStyle(sw).backgroundColor), 'the swatch shows the field value: ' + (sw && getComputedStyle(sw).backgroundColor));
-      var unset = root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeColoursView-unset');
-      x.test(unset.length === cards.length - 1, 'every other colour is marked unset: ' + unset.length);
-      theme.primary2 = '#00ff00';
-      await wait(50);
-      x.test(root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeColoursView-unset').length === cards.length - 2, 'a swatch follows its field');
+      x.test(tabLabels.indexOf('Colours') < 0 && tabLabels.indexOf('Legacy CSS') < 0 && tabLabels.indexOf('CSS tokens') === 2 && tabLabels.indexOf('Icons / Images') >= 0 && tabLabels.indexOf('Inputs') >= 0, 'one tab per Theme section: ' + tabLabels.join(', '));
 
       // CSS tokens tab. Overrides: this theme's rows only; add through the form; remove through the row action.
       await select('CSS tokens', function() { return root.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row').length > 0; });

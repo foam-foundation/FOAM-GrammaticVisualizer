@@ -157,7 +157,7 @@ design system · 🟡 paper cut — cost time, not design.
 
 **Needed** · a Theme screen where changing a colour changes the app.
 **foam3** · `Theme.primary1..5`, `secondary*`, `approval*`, `warning*`, `destructive*`, `grey*`, `black`, `white`, `inputHeight`, `inputVerticalPadding`, `inputHorizontalPadding` are plain strings that `ApplicationController.MACROS` text-replaces into `/*%PRIMARY1%*/` and `$inputHeight` in CSS (`ApplicationController.js:132-178`, `:676-717`). Five files still use the colour macros; every view written with `$primary500`-style tokens ignores them. The screen gives no hint which system a field belongs to.
-**Did** · `ThemeColoursView` labels the fields "Legacy CSS macros" and puts the token overrides under them.
+**Did** · dropped the Colours tab from the app's Theme screen; the CSS tokens tab (overrides + catalogue) stands in its place. Removal from foam3 sized at 4-6 days (deprecate first: 1-1.5).
 **Fix** · drop the macro colour fields, or have the app convert them into `CSSTokenOverride` rows on save.
 
 ## 19. No screen for `CSSTokenOverride`, the real per-theme theming 🟠
