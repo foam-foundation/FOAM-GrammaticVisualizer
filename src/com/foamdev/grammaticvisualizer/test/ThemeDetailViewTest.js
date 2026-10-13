@@ -115,10 +115,13 @@ foam.CLASS({
       Array.from(cat().querySelectorAll('.foam-u2-view-TabChoiceView label')).find(function(l) { return l.textContent.trim() === 'Borders'; }).querySelector('input').click();
       await until(function() { return catRows().length > 0 && catRows().length < 20; }, 5000);
       x.test(catRows().length === 8 && Array.from(catRows()).every(function(r) { return /\$border/.test(r.textContent); }), 'a group tab filters to that group: ' + catRows().length);
-      // The search box is foam's own (FilterView over SmartView). It is there; driving SmartView with
-      // synthetic events is not reliable headless, so the DAO path is proven through the group tab above.
-      x.test(!! cat().querySelector('input[type=search]'), 'the catalogue has foam\'s search box');
-      await until(function() { return Array.from(catRows()).some(function(r) { return /borderBrand/.test(r.textContent); }); }, 3000);
+      // Search: the catalogue's own field (a plain TextField with onKey) sets the table's searchPredicate to a KEYWORD.
+      var searchEl = cat().querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-search input, input.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-search');
+      x.test(!! searchEl && ! cat().querySelector('.foam-u2-filter-FilterView'), 'the catalogue has its own search field and no foam query bar');
+      searchEl.value = 'borderBrand';
+      searchEl.dispatchEvent(new Event('input', { bubbles: true }));
+      await until(function() { return catRows().length === 4; }, 6000);
+      x.test(catRows().length === 4 && Array.from(catRows()).every(function(r) { return /borderBrand/.test(r.textContent); }), 'a bare word filters the catalogue: ' + catRows().length);
       Array.from(catRows()).find(function(r) { return /borderBrand/.test(r.textContent); }).click();
       await wait(50);
       var srcEl = tov().querySelector('input[name=source]');
@@ -172,7 +175,7 @@ foam.CLASS({
 
       // Chrome rule: every button and input is a u2 view.
       // The catalogue is foam's own DAOBrowserView (tab radios, column-resize handles): not our chrome.
-      var ours = function(el) { return ! el.closest('.foam-comics-v2-DAOBrowserView'); };
+      var ours = function(el) { return ! el.closest('.foam-comics-v2-DAOBrowserView') && ! el.closest('.foam-u2-borders-ClearableSearchBorder'); };
       var rawButtons = Array.from(root.querySelectorAll('button')).filter(ours).filter(function(b) { return ! /foam-u2-ActionView/.test(b.className); });
       var rawInputs  = Array.from(root.querySelectorAll('input, select, textarea')).filter(ours).filter(function(e) { return ! /foam-u2-/.test(e.className); });
       x.test(rawButtons.length === 0, 'every button is an ActionView: ' + rawButtons.length);
