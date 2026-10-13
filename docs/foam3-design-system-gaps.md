@@ -33,6 +33,8 @@ design system · 🟡 paper cut — cost time, not design.
 | 20 | `ImageView` renders a picture at natural size | 🟡 | A bounded preview view for `Image` properties |
 | 21 | Theme fields explain nothing: no `help`, no units, raw class names | 🟡 | `help` on every Theme property |
 | 22 | `TabbedDetailView` renders every tab twice; async views in the first tree crash | 🟠 | Apply section visibility synchronously on first render |
+| 23 | One permission round trip per property on first open of a record | 🟡 | Batch `auth.check` per class |
+| 24 | `DAOBrowserView` picks canned query index 1 by default | 🟡 | Default to 0 |
 
 ---
 
@@ -188,3 +190,17 @@ design system · 🟡 paper cut — cost time, not design.
 **foam3** · `TabbedDetailView.updateVis` is `isMerged` with a 100ms delay (`TabbedDetailView.js:125-132`), so the first render runs with `stableVisibilities_ = []`, which the template treats as "every section". The real list arrives 100ms later and the whole tab tree is rebuilt. Views in the first tree that render asynchronously are still awaiting: `FObjectView` (the default for `appConfig`, an `FObjectProperty`) awaits `choicesLoaded`, resumes on a detached element, and `end()` returns `undefined`, so `.start()` throws (`FObjectView.js:290`). Every open also logs forty "Attempt to add child to detached parent" warnings. Stock foam3's Admin → Themes - All shows both.
 **Did** · `ThemeDetailView` redeclares `updateVis` without the merge; Theme's sections resolve synchronously, so the first render is the only one.
 **Fix** · apply the visibility list synchronously on first render and keep the merge for later changes; or have `addChild_` on a detached parent stop the async render instead of warning.
+
+## 23. One permission round trip per property on first open of a record 🟡
+
+**Needed** · open a Theme as a non-admin.
+**foam3** · every Theme property is `writePermissionRequired`, so `createVisibilityFor` (`Element2.js:1885-1915`) runs `auth.check` for `theme.rw.<prop>` then `theme.ro.<prop>`, one request each, about fifty per record. `CachedAuthServiceProxy` caches per permission string for the session (`CachedAuthServiceProxy.js:46-55`), so only the first open pays, but that first open fills in over four to six seconds, tab by tab. There is no batched `checkAll`.
+**Did** · nothing; rendered the tabs once so at least the chrome does not rebuild while the fields arrive (gap 22).
+**Fix** · one `auth.checkAll(class)` round trip that returns every `<class>.rw/ro.<prop>` answer at once, used by the sectioned detail views.
+
+## 24. `DAOBrowserView` picks canned query index 1 by default 🟡
+
+**Needed** · a table whose first canned query ("All") is the one shown on open.
+**foam3** · `DAOBrowserView.cannedPredicate` falls back to `config$cannedQueries[1]` when `preSelectedCannedQuery` is null (`DAOBrowserView.js:190-194`), so the second tab is selected on open unless the config says `0`.
+**Did** · `preSelectedCannedQuery: 0` on the catalogue's config.
+**Fix** · default to index 0.
