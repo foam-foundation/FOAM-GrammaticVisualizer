@@ -210,5 +210,5 @@ design system · 🟡 paper cut — cost time, not design.
 
 **Needed** · type `Canada` into the Countries list, or `borderBrand` into the token catalogue, and see the rows filter.
 **foam3** · `DAOControllerConfig.searchMode` defaults to `FULL`, where `foam.parse.QueryRouter` tries the simple query language first and only runs the full-text `KEYWORD` search when the text starts with `TEXT:` or `:` (`QueryRouter.js`, grammar `FULL: alt(query, text)`, `text: seq1(1, key('TEXT:' | ':'), ...)`). A bare word parses to no predicate, the URL still records `search=Canada`, and the table shows every row. Seen on the stock Countries menu as `demo`; `:Canada` gives one row.
-**Did** · `searchMode: 'SIMPLE'` on the catalogue's config, where a bare word is a keyword search.
+**Did** · `SIMPLE` mode is no better: its grammar is the same `text` rule with the prefix. The catalogue hides the query bar (`hideQueryBar`) and keeps a `ClearableSearchField` of its own that sets `config.searchPredicate = KEYWORD(text)`; `KEYWORD` works on a client `MDAO`.
 **Fix** · in `FULL`, fall back to `KEYWORD(text)` when the query parser produces nothing; or make the placeholder say the prefix.
