@@ -11,11 +11,12 @@ foam.CLASS({
 
   documentation: `
     foam.core.theme.Theme with one tab per section, as TabbedDetailView draws it,
-    but the Colours (retitled Legacy CSS), Icons / Images, Inputs and Navigation tabs
-    get a view that shows what the fields do: swatches, bounded image
-    previews, a live input sample, and help on each navigation field. A CSS
-    tokens tab (no Theme section behind it) holds the overrides and the token
-    catalogue. Every other section renders as the plain SectionView. Mounted from the
+    but the Icons / Images, Inputs and Navigation tabs get a view that shows what
+    the fields do: bounded image
+    previews, a live input sample, and help on each navigation field. The legacy
+    Colours tab is dropped; a CSS tokens tab (no Theme section behind it) takes
+    its place with the overrides and the token catalogue. Every other section
+    renders as the plain SectionView. Mounted from the
     grammaticVisualizer.theme-all menu through config.detailView.
   `,
 
@@ -23,7 +24,6 @@ foam.CLASS({
     // Segmented control instead of the underlined strip; same UnstyledTabs API, so TabbedDetailView's render is untouched.
     'foam.u2.SegmentedTabs as Tabs',
     'com.foamdev.grammaticvisualizer.theme.InputSizingView',
-    'com.foamdev.grammaticvisualizer.theme.ThemeColoursView',
     'com.foamdev.grammaticvisualizer.theme.ThemeImagesView',
     'com.foamdev.grammaticvisualizer.theme.ThemeTokensView',
     'foam.layout.Section'
@@ -45,7 +45,6 @@ foam.CLASS({
   `,
 
   messages: [
-    { name: 'LEGACY_TAB', message: 'Legacy CSS' },
     { name: 'TOKENS_TAB', message: 'CSS tokens' },
     { name: 'HELP_DEFAULT_MENU', message: 'Menu the user lands on after login. Falls back to the first menu they may read.' },
     { name: 'HELP_UNAUTH_MENU', message: 'Menu shown before login (sign-in, sign-up, or a public page).' },
@@ -60,7 +59,6 @@ foam.CLASS({
       name: 'SECTION_VIEWS',
       documentation: 'Section name to the view spec that replaces SectionView for it.',
       value: {
-        colours: { class: 'com.foamdev.grammaticvisualizer.theme.ThemeColoursView' },
         images:  { class: 'com.foamdev.grammaticvisualizer.theme.ThemeImagesView' },
         inputs:  { class: 'com.foamdev.grammaticvisualizer.theme.InputSizingView' }
       }
@@ -72,15 +70,16 @@ foam.CLASS({
       name: 'sections',
       expression: function(of, useSections, propertyWhitelist) {
         var ss = foam.u2.detail.AbstractSectionedDetailView.SECTIONS.expression.call(this, of, useSections, propertyWhitelist);
+        // The Colours section is the legacy CSS-macro palette (primary1..5, grey1..5, ...): dead in
+        // foam3, slated for removal. Its tab goes; the CSS tokens tab takes its place.
+        var at = ss.findIndex(function(s) { return s.name === 'colours'; });
+        if ( at >= 0 ) ss.splice(at, 1);
         ss.forEach(function(s) {
           var v = this.SECTION_VIEWS[s.name];
           if ( v ) s.view = v;
-          if ( s.name === 'colours' ) s.title = this.LEGACY_TAB;
           if ( s.name === 'navigation' ) s.view = { class: 'foam.u2.detail.SectionView', config: this.navigationHelp() };
         }.bind(this));
-        // The current theming system has no Theme section; give it a tab of its own after the legacy one.
-        var at = ss.findIndex(function(s) { return s.name === 'colours'; });
-        ss.splice(at + 1, 0, this.Section.create({
+        ss.splice(at < 0 ? ss.length : at, 0, this.Section.create({
           name: 'tokens',
           title: this.TOKENS_TAB,
           view: { class: 'com.foamdev.grammaticvisualizer.theme.ThemeTokensView' }
