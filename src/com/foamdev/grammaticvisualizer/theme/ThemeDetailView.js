@@ -32,6 +32,7 @@ foam.CLASS({
   css: `
     /* TabbedDetailView pads .foam-u2-Tabs-content; the segmented class names differ, so pad them here. */
     << .foam-u2-SegmentedTabs { padding: $space-2_5; }
+    << textarea[name=sideNav] { width: 100%; font-family: monospace; box-sizing: border-box; }
     << .foam-u2-SegmentedTabs-content > div {
       padding: $space-3 $space-4;
     }
@@ -46,6 +47,7 @@ foam.CLASS({
 
   messages: [
     { name: 'TOKENS_TAB', message: 'CSS tokens' },
+    { name: 'CUSTOM_CSS_TAB', message: 'Custom CSS' },
     { name: 'HELP_DEFAULT_MENU', message: 'Menu the user lands on after login. Falls back to the first menu they may read.' },
     { name: 'HELP_UNAUTH_MENU', message: 'Menu shown before login (sign-in, sign-up, or a public page).' },
     { name: 'HELP_LOGO_REDIRECT', message: 'Menu id opened by a click on the top-nav logo.' },
@@ -55,6 +57,10 @@ foam.CLASS({
   ],
 
   constants: [
+    {
+      name: 'TAB_ORDER',
+      value: [ 'infoSection', 'tokens', 'images', 'navigation', 'inputs', 'sectionCss', 'urlMapping', 'applicationSection', 'administration' ]
+    },
     {
       name: 'SECTION_VIEWS',
       documentation: 'Section name to the view spec that replaces SectionView for it.',
@@ -84,6 +90,12 @@ foam.CLASS({
           title: this.TOKENS_TAB,
           view: { class: 'com.foamdev.grammaticvisualizer.theme.ThemeTokensView' }
         }));
+        // "CSS" next to "CSS tokens" is a riddle; say what the section holds.
+        ss.forEach(function(s) { if ( s.name === 'sectionCss' ) s.title = this.CUSTOM_CSS_TAB; }.bind(this));
+        // Tabs in order of how often a theme owner touches them; the model's order is by history.
+        var order = this.TAB_ORDER;
+        var rank = function(s) { var i = order.indexOf(s.name); return i < 0 ? order.length : i; };
+        ss.sort(function(a, b) { return rank(a) - rank(b); });
         return ss;
       }
     }
@@ -126,7 +138,8 @@ foam.CLASS({
         logoRedirect:               { help: this.HELP_LOGO_REDIRECT },
         topNavigation:              { help: this.HELP_TOP_NAV },
         footerView:                 { help: this.HELP_FOOTER },
-        sideNav:                    { help: this.HELP_SIDE_NAV }
+        // A JSON view spec: a code box, not a one-line field that truncates it.
+        sideNav:                    { help: this.HELP_SIDE_NAV, view: { class: 'foam.u2.tag.TextArea', rows: 6 } }
       };
     }
   ]

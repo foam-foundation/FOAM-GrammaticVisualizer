@@ -30,7 +30,9 @@ foam.CLASS({
   css: `
     << { display: flex; flex-direction: column; gap: $space-3; }
     <<help { color: $textSecondary; }
-    <<card { display: grid; grid-template-columns: auto 1fr; gap: $space-3; border: 1px solid $borderLight; border-radius: $radius; padding: $space-2; background: $backgroundDefault; }
+    <<card { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: $space-2 $space-3; border: 1px solid $borderLight; border-radius: $radius; padding: $space-2; background: $backgroundDefault; }
+    <<cardTitle { grid-column: 1 / -1; }
+    <<value { align-self: start; }
     <<previews { display: flex; gap: $space-2; }
     <<box {
       width: 15rem; height: 7.5rem;
@@ -45,7 +47,8 @@ foam.CLASS({
     <<tag { position: absolute; left: $space-1; top: $space-1; background: $backgroundDefault; color: $textSecondary; padding: 0 $space-1; border-radius: $radius; }
     <<none { color: $textTertiary; }
     <<rest { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: $space-3; }
-    <<card textarea { width: 100%; font-family: monospace; }
+    /* One line that grows with a long data: URI, instead of an 80px box for a short path. */
+    <<card textarea { width: 100%; box-sizing: border-box; font-family: monospace; field-sizing: content; min-height: 3.4rem; max-height: 12rem; }
   `,
 
   properties: [
@@ -86,12 +89,15 @@ foam.CLASS({
       var self  = this;
       var value = this.data$.dot(p.name);
       parent.start().addClass(this.myClass('card'))
+        .start().addClass('p-label', this.myClass('cardTitle')).add(p.label || p.name).end()
         .start().addClass(this.myClass('previews'))
           .call(function() { self.renderBox(this, value, 'light', self.LIGHT); })
           .call(function() { self.renderBox(this, value, 'dark', self.DARK); })
         .end()
-        .add(p.clone().copyFrom({ view: { class: 'foam.u2.tag.TextArea', rows: 3 } })
-          .toPropertyView({ data$: this.data$ }, this.__subContext__))
+        .start().addClass(this.myClass('value'))
+          .add(p.clone().copyFrom({ label: '', view: { class: 'foam.u2.tag.TextArea', rows: 1 } })
+            .toPropertyView({ data$: this.data$ }, this.__subContext__))
+        .end()
       .end();
     },
 
