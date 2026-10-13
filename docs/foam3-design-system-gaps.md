@@ -35,6 +35,7 @@ design system · 🟡 paper cut — cost time, not design.
 | 22 | `TabbedDetailView` renders every tab twice; async views in the first tree crash | 🟠 | Apply section visibility synchronously on first render |
 | 23 | One permission round trip per property on first open of a record | 🟡 | Batch `auth.check` per class |
 | 24 | `DAOBrowserView` picks canned query index 1 by default | 🟡 | Default to 0 |
+| 25 | A bare word in the table search box matches nothing | 🟠 | Fall back to keyword search when the query parser yields no predicate |
 
 ---
 
@@ -204,3 +205,10 @@ design system · 🟡 paper cut — cost time, not design.
 **foam3** · `DAOBrowserView.cannedPredicate` falls back to `config$cannedQueries[1]` when `preSelectedCannedQuery` is null (`DAOBrowserView.js:190-194`), so the second tab is selected on open unless the config says `0`.
 **Did** · `preSelectedCannedQuery: 0` on the catalogue's config.
 **Fix** · default to index 0.
+
+## 25. A bare word in the table search box matches nothing 🟠
+
+**Needed** · type `Canada` into the Countries list, or `borderBrand` into the token catalogue, and see the rows filter.
+**foam3** · `DAOControllerConfig.searchMode` defaults to `FULL`, where `foam.parse.QueryRouter` tries the simple query language first and only runs the full-text `KEYWORD` search when the text starts with `TEXT:` or `:` (`QueryRouter.js`, grammar `FULL: alt(query, text)`, `text: seq1(1, key('TEXT:' | ':'), ...)`). A bare word parses to no predicate, the URL still records `search=Canada`, and the table shows every row. Seen on the stock Countries menu as `demo`; `:Canada` gives one row.
+**Did** · `searchMode: 'SIMPLE'` on the catalogue's config, where a bare word is a keyword search.
+**Fix** · in `FULL`, fall back to `KEYWORD(text)` when the query parser produces nothing; or make the placeholder say the prefix.

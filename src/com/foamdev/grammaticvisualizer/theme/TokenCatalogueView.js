@@ -117,6 +117,9 @@ foam.CLASS({
           // foam3 falls back to index 1 when nothing is chosen; say 0 (All) explicitly.
           preSelectedCannedQuery: 0,
           searchColumns: [ 'name' ],
+          // SIMPLE: a bare word is a keyword search. In FULL (the default) a bare word goes to the
+          // query parser and matches nothing; full-text needs a 'TEXT:' or ':' prefix (gap 25).
+          searchMode: 'SIMPLE',
           createPredicate: this.False.create(),
           editPredicate:   this.False.create(),
           deletePredicate: this.False.create(),
