@@ -19,7 +19,7 @@ foam.CLASS({
 
   implements: [ 'foam.mlang.Expressions' ],
 
-  imports: [ 'cssTokenOverrideDAO?' ],
+  imports: [ 'cssTokenOverrideDAO?', 'ctrl?' ],
 
   requires: [
     'foam.core.theme.customisation.CSSTokenOverride',
@@ -29,14 +29,14 @@ foam.CLASS({
   classes: [
     {
       name: 'Row',
-      properties: [ 'override', 'dao' ],
+      properties: [ 'override', 'dao', 'owner' ],
       actions: [
         {
           name: 'remove',
           label: '✕',
           toolTip: 'Remove this override',
           buttonStyle: 'TERTIARY',
-          code: function() { this.dao.remove(this.override); }
+          code: async function() { await this.dao.remove(this.override); this.owner.recolour(); }
         }
       ]
     }
@@ -124,7 +124,7 @@ foam.CLASS({
               .start('th').end()
             .end().end()
             .start('tbody').forEach(rows, function(o) {
-              var row = self.Row.create({ override: o, dao: self.cssTokenOverrideDAO });
+              var row = self.Row.create({ override: o, dao: self.cssTokenOverrideDAO, owner: self });
               this.start('tr').addClass(self.myClass('row'))
                 .start('td').addClass(self.myClass('token')).add('$' + o.source).end()
                 .start('td').call(function() { self.renderValue(this, o.target); }).end()
@@ -142,6 +142,11 @@ foam.CLASS({
             .add(this.ADD_OVERRIDE)
           .end()
         .endContext();
+    },
+
+    function recolour() {
+      /** CSSTokenOverrideService reloads its cache on a DAO event, but installed CSS is only re-expanded on themeChange. */
+      if ( this.ctrl && this.ctrl.pub ) this.ctrl.pub('themeChange');
     },
 
     function renderCell(form, label, prop) {
@@ -175,6 +180,7 @@ foam.CLASS({
         });
         await this.cssTokenOverrideDAO.put(o);
         this.source = ''; this.light = ''; this.dark = '';
+        this.recolour();
       }
     }
   ],
