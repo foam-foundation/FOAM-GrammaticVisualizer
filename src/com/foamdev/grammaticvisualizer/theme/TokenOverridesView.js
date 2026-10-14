@@ -11,7 +11,9 @@ foam.CLASS({
 
   documentation: `
     The CSSTokenOverride rows of one theme, as a table with a swatch per value,
-    and a one-line form to add or replace one. A row's target is the value for
+    and a one-line form to add or replace one. In EDIT mode each row's cells
+    are inputs (ModeAltView swaps TokenCellView for an editor) and an edit is
+    saved to the DAO when it commits. A row's target is the value for
     every colour mode; variants.dark wins in dark mode. foam3 keeps these rows
     in cssTokenOverrideDAO and CSSTokenOverrideService reads them live, so a
     put here recolours the running app.
@@ -22,14 +24,62 @@ foam.CLASS({
   imports: [ 'cssTokenOverrideDAO?', 'ctrl?' ],
 
   requires: [
+    'com.foamdev.grammaticvisualizer.theme.TokenCellView',
     'foam.core.theme.customisation.CSSTokenOverride',
+    'foam.u2.ControllerMode',
     'foam.u2.view.ColorPicker'
   ],
 
   classes: [
     {
       name: 'Row',
-      properties: [ 'override', 'dao', 'owner' ],
+      documentation: `
+        One override as editable properties. Each value property pairs a read view
+        (TokenCellView) with an edit view through ModeAltView, so the ControllerMode
+        in the row's context decides which one shows. An edit is written back to
+        the DAO when the input commits (on change, not per key).
+      `,
+      requires: [ 'foam.core.theme.customisation.CSSTokenOverride' ],
+      properties: [
+        { name: 'override', hidden: true },
+        { name: 'dao', hidden: true },
+        { name: 'owner', hidden: true },
+        {
+          class: 'String',
+          name: 'source',
+          label: 'Token',
+          view: {
+            class: 'foam.u2.view.ModeAltView',
+            readView: { class: 'com.foamdev.grammaticvisualizer.theme.TokenCellView', asName: true },
+            writeView: { class: 'foam.u2.TextField' }
+          }
+        },
+        {
+          class: 'String',
+          name: 'light',
+          view: {
+            class: 'foam.u2.view.ModeAltView',
+            readView: { class: 'com.foamdev.grammaticvisualizer.theme.TokenCellView' },
+            writeView: { class: 'foam.u2.view.ColorPicker' }
+          }
+        },
+        {
+          class: 'String',
+          name: 'dark',
+          view: {
+            class: 'foam.u2.view.ModeAltView',
+            readView: { class: 'com.foamdev.grammaticvisualizer.theme.TokenCellView' },
+            writeView: { class: 'foam.u2.view.ColorPicker' }
+          }
+        },
+        { class: 'Boolean', name: 'enabled' }
+      ],
+      methods: [
+        function init() {
+          this.SUPER();
+          ['source', 'light', 'dark', 'enabled'].forEach(function(n) { this.onDetach(this[n + '$'].sub(this.save)); }, this);
+        }
+      ],
       actions: [
         {
           name: 'remove',
@@ -37,6 +87,28 @@ foam.CLASS({
           toolTip: 'Remove this override',
           buttonStyle: 'TERTIARY',
           code: async function() { await this.dao.remove(this.override); this.owner.recolour(); }
+        }
+      ],
+      listeners: [
+        {
+          name: 'save',
+          isMerged: true,
+          mergeDelay: 100,
+          code: async function() {
+            var source = this.source.trim().replace(/^\$/, '');
+            if ( ! source || ! ( this.light || this.dark ) ) return;   // incomplete edit: leave the stored row alone
+            var o = this.CSSTokenOverride.create({
+              theme: this.override.theme,
+              source: source,
+              target: this.light,
+              variants: this.dark ? { dark: this.dark } : {},
+              enabled: this.enabled
+            });
+            // source is part of the id: a rename is a new row, so drop the old one.
+            if ( source !== this.override.source ) await this.dao.remove(this.override);
+            this.override = await this.dao.put(o);
+            this.owner.recolour();
+          }
         }
       ]
     }
@@ -49,8 +121,7 @@ foam.CLASS({
     { name: 'COL_SOURCE', message: 'Token' },
     { name: 'COL_LIGHT', message: 'Light' },
     { name: 'COL_DARK', message: 'Dark' },
-    { name: 'COL_ENABLED', message: 'Enabled' },
-    { name: 'DASH', message: '—' }
+    { name: 'COL_ENABLED', message: 'Enabled' }
   ],
 
   css: `
@@ -62,8 +133,7 @@ foam.CLASS({
     <<table th { text-align: left; padding: $space-1 $space-2; border-bottom: 1px solid $borderDefault; }
     <<table td { padding: $space-1 $space-2; border-bottom: 1px solid $borderLight; vertical-align: middle; }
     <<token { font-family: monospace; }
-    <<swatch { display: inline-block; width: 1rem; height: 1rem; border-radius: $radius; border: 1px solid $borderLight; vertical-align: middle; margin-right: $space-1; }
-    <<value { font-family: monospace; }
+    <<table td input[type=text] { width: 100%; font-family: monospace; }
     <<form { display: flex; flex-wrap: wrap; gap: $space-2; align-items: flex-end; }
     <<cell { display: flex; flex-direction: column; gap: $space-1; }
     <<cell input[type=text] { width: 14rem; }
@@ -113,7 +183,7 @@ foam.CLASS({
       this.onDetach(this.cssTokenOverrideDAO.on.sub(this.refresh));
       this.refresh();
       this
-        .add(this.slot(function(rows) {
+        .add(this.slot(function(rows, editable) {
           if ( ! rows.length ) return this.E().addClass('p', self.myClass('empty')).add(self.EMPTY);
           return this.E('table').addClass(self.myClass('table'))
             .start('thead').start('tr')
@@ -124,13 +194,19 @@ foam.CLASS({
               .start('th').end()
             .end().end()
             .start('tbody').forEach(rows, function(o) {
-              var row = self.Row.create({ override: o, dao: self.cssTokenOverrideDAO, owner: self });
+              var row = self.Row.create({
+                override: o, dao: self.cssTokenOverrideDAO, owner: self,
+                source: o.source, light: o.target, dark: ( o.variants && o.variants.dark ) || '', enabled: o.enabled
+              });
+              // The row's ControllerMode picks each cell's read or edit view (ModeAltView).
               this.start('tr').addClass(self.myClass('row'))
-                .start('td').addClass(self.myClass('token')).add('$' + o.source).end()
-                .start('td').call(function() { self.renderValue(this, o.target); }).end()
-                .start('td').call(function() { self.renderValue(this, o.variants && o.variants.dark); }).end()
-                .start('td').add(o.enabled ? '✓' : self.DASH).end()
-                .start('td').show(self.editable$).startContext({ data: row }).add(row.REMOVE).endContext().end()
+                .startContext({ data: row, controllerMode: editable ? self.ControllerMode.EDIT : self.ControllerMode.VIEW })
+                  .start('td').addClass(self.myClass('token')).add(row.SOURCE).end()
+                  .start('td').add(row.LIGHT).end()
+                  .start('td').add(row.DARK).end()
+                  .start('td').add(row.ENABLED).end()
+                  .start('td').show(editable).add(row.REMOVE).end()
+                .endContext()
               .end();
             }).end();
         }))
@@ -155,12 +231,6 @@ foam.CLASS({
         .start('span').addClass('p-label').add(label).end()
         .add(prop)
       .end();
-    },
-
-    function renderValue(td, v) {
-      if ( ! v ) { td.add(this.DASH); return; }
-      td.start('span').addClass(this.myClass('swatch')).style({ 'background-color': v }).end()
-        .start('span').addClass(this.myClass('value')).add(v).end();
     }
   ],
 
