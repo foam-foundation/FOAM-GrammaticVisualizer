@@ -36,7 +36,7 @@ foam.CLASS({
       var wait  = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };
       // Section visibility and slot rendering settle asynchronously; poll instead of guessing a delay.
       var until = async function(fn, ms) {
-        for ( var t = 0 ; t < ( ms || 3000 ) ; t += 50 ) { if ( fn() ) return true; await wait(50); }
+        for ( var t = 0 ; t < ( ms || 3000 ) ; t += 50 ) { if ( await fn() ) return true; await wait(50); }
         return false;
       };
       var dao  = this.MDAO.create({ of: this.CSSTokenOverride }, x);
@@ -76,8 +76,24 @@ foam.CLASS({
       var tov = function() { return root.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView'); };
       x.test(root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView').length === 1, 'one override table in the DOM');
       var rows = function() { return tov().querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row'); };
-      x.test(rows().length === 1 && /\$primary500/.test(rows()[0].textContent) && /#123456/.test(rows()[0].textContent) && /#abcdef/.test(rows()[0].textContent),
-        'lists the theme\'s overrides with light and dark values: ' + (rows()[0] && rows()[0].textContent));
+      // EDIT mode: the cells are inputs (ModeAltView write views) holding the row's values.
+      var cellInputs = function(r) { return Array.from(r.querySelectorAll('input')).map(function(i) { return i.type === 'checkbox' ? String(i.checked) : i.value; }); };
+      x.test(rows().length === 1 && cellInputs(rows()[0]).join(' ') === 'primary500 #123456 #abcdef true',
+        'EDIT mode: each row is editable in place, inputs hold token, light, dark, enabled: ' + (rows()[0] && cellInputs(rows()[0]).join(' ')));
+      // Edit a value in the row: committing the input writes the override back.
+      var lightIn = rows()[0].querySelectorAll('input')[1];
+      lightIn.value = '#654321'; lightIn.dispatchEvent(new Event('change'));
+      var findRow = async function(src) { return ( await dao.select() ).array.find(function(o) { return o.theme === 't1' && o.source === src; }); };
+      var stored = async function() { return ( await findRow('primary500') ) || {}; };
+      await until(async function() { return ( await stored() ).target === '#654321'; });
+      x.test(( await stored() ).target === '#654321' && ( await stored() ).variants.dark === '#abcdef', 'editing a row\'s light value saves it and keeps dark');
+      await until(function() { return rows()[0] && cellInputs(rows()[0])[1] === '#654321'; });
+      // Rename in place: source is part of the id, so the old row goes and a new one comes.
+      var srcIn = rows()[0].querySelectorAll('input')[0];
+      srcIn.value = 'primary400'; srcIn.dispatchEvent(new Event('change'));
+      await until(async function() { return !! ( await findRow('primary400') ); });
+      x.test(!! ( await findRow('primary400') ) && ! ( await findRow('primary500') ), 'renaming a row\'s token moves the override to the new name');
+      await until(function() { return rows().length === 1 && cellInputs(rows()[0])[0] === 'primary400'; });
       // reach the view object through the DAO: put a row and the table follows.
       await dao.put(this.CSSTokenOverride.create({ theme: 't1', source: 'textDefault', target: '#222222' }, y));
       await until(function() { return rows().length === 2; });
@@ -124,7 +140,7 @@ foam.CLASS({
       x.test(catRows().length === 4 && Array.from(catRows()).every(function(r) { return /borderBrand/.test(r.textContent); }), 'a bare word filters the catalogue: ' + catRows().length);
       Array.from(catRows()).find(function(r) { return /borderBrand/.test(r.textContent); }).click();
       await wait(50);
-      var srcEl = tov().querySelector('input[name=source]');
+      var srcEl = tov().querySelector('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-form input[name=source]');
       x.test(srcEl && /^borderBrand/.test(srcEl.value), 'clicking a row prefills the override form: ' + (srcEl && srcEl.value));
       x.test(addBtn() && ! addBtn().disabled, 'the form is ready to add after a pick');
 
@@ -165,6 +181,10 @@ foam.CLASS({
       await until(function() { return rootV.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row').length > 0; });
       var shown = function(el) { return !! el && el.getClientRects().length > 0; };
       x.test(! shown(rootV.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-form')), 'VIEW mode: no add form');
+      var rowV = rootV.querySelector('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row');
+      x.test(! rowV.querySelector('input[type=text], input[type=color]') && /\$primary400/.test(rowV.textContent) && /#654321/.test(rowV.textContent) && /#abcdef/.test(rowV.textContent),
+        'VIEW mode: cells are read views (token name, swatch and value), no inputs: ' + rowV.textContent);
+      x.test(rowV.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCellView-swatch').length === 2, 'VIEW mode: light and dark show a swatch');
       x.test(! shown(rootV.querySelector('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row .foam-u2-ActionView')), 'VIEW mode: no remove action on rows');
       x.test(! rootV.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-pickable'), 'VIEW mode: catalogue rows are not pickable');
       x.test(/Press Edit/.test(rootV.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-help').textContent), 'VIEW mode: the help says to press Edit');

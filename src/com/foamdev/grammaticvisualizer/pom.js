@@ -7,6 +7,7 @@ foam.POM({
     { name: 'Sentence',                       flags: 'js|java' },
     { name: 'GrammarVisualizerView',          flags: 'web' },
     { name: 'theme/ThemeDetailView',          flags: 'web' },
+    { name: 'theme/TokenCellView',            flags: 'web' },
     { name: 'theme/TokenOverridesView',       flags: 'web' },
     { name: 'theme/TokenRow',                 flags: 'web' },
     { name: 'theme/TokenCatalogueView',       flags: 'web' },
