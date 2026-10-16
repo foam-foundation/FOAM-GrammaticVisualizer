@@ -10,8 +10,9 @@ foam.CLASS({
   extends: 'foam.u2.View',
 
   documentation: `
-    Read view for an override row's cells: a token name as "$name", or a value
-    with a colour swatch. Paired with an edit view through foam.u2.view.ModeAltView,
+    Read view for a token's cells (override rows and the catalogue): a token
+    name as "$name", or a value, with a colour swatch when the value reads as
+    a colour (hex, rgb(), hsl(), currentColor). Paired with an edit view through foam.u2.view.ModeAltView,
     so the same property reads as text in VIEW mode and is an input in EDIT mode.
   `,
 
@@ -19,7 +20,8 @@ foam.CLASS({
 
   css: `
     << { font-family: monospace; display: inline-flex; align-items: center; gap: $space-1; }
-    <<swatch { display: inline-block; width: 1rem; height: 1rem; border-radius: $radius; border: 1px solid $borderLight; }
+    <<pair { display: inline-flex; align-items: center; gap: $space-2; }
+    <<swatch { display: inline-block; flex: none; width: 1.6rem; height: 1.6rem; border-radius: $radius; border: 1px solid $borderLight; }
   `,
 
   properties: [
@@ -32,9 +34,11 @@ foam.CLASS({
       this.addClass(this.myClass()).add(this.slot(function(data) {
         if ( ! data ) return self.DASH;
         if ( self.asName ) return '$' + data;
-        return this.E('span')
-          .start('span').addClass(self.myClass('swatch')).style({ 'background-color': data }).end()
-          .start('span').add(data).end();
+        return this.E('span').addClass(self.myClass('pair'))
+          .callIf(/^(#|rgb|hsl|currentColor$)/i.test(data), function() {
+            this.start('span').addClass(self.myClass('swatch')).style({ 'background-color': data }).end();
+          })
+          .start('span').addClass(self.myClass('value')).add(data).end();
       }));
     }
   ]

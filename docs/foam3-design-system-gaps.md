@@ -36,6 +36,7 @@ design system · 🟡 paper cut — cost time, not design.
 | 23 | One permission round trip per property on first open of a record | 🟡 | Batch `auth.check` per class |
 | 24 | `DAOBrowserView` picks canned query index 1 by default | 🟡 | Default to 0 |
 | 25 | A bare word in the table search box matches nothing | 🟠 | Fall back to keyword search when the query parser yields no predicate |
+| 26 | A table cell can't have an edit view: every cell is forced to VIEW | 🟠 | A per-column `tableCellView` / mode-aware cell, plus an inline-edit table mode |
 
 ---
 
@@ -212,3 +213,10 @@ design system · 🟡 paper cut — cost time, not design.
 **foam3** · `DAOControllerConfig.searchMode` defaults to `FULL`, where `foam.parse.QueryRouter` tries the simple query language first and only runs the full-text `KEYWORD` search when the text starts with `TEXT:` or `:` (`QueryRouter.js`, grammar `FULL: alt(query, text)`, `text: seq1(1, key('TEXT:' | ':'), ...)`). A bare word parses to no predicate, the URL still records `search=Canada`, and the table shows every row. Seen on the stock Countries menu as `demo`; `:Canada` gives one row.
 **Did** · `SIMPLE` mode is no better: its grammar is the same `text` rule with the prefix. The catalogue hides the query bar (`hideQueryBar`) and keeps a `ClearableSearchField` of its own that sets `config.searchPredicate = KEYWORD(text)`; `KEYWORD` works on a client `MDAO`.
 **Fix** · in `FULL`, fall back to `KEYWORD(text)` when the query parser produces nothing; or make the placeholder say the prefix.
+
+## 26. A table cell can't have an edit view: every cell is forced to VIEW 🟠
+
+**Needed** · the token catalogue, in EDIT mode, with Light and Dark as colour pickers in the row and an Add / Save override action per row.
+**foam3** · `UnstyledTableRow` renders each cell inside `startContext({ controllerMode: 'VIEW' })` and only through `prop.tableCellFormatter.format(...)` (`UnstyledTableRow.js:188-220`). The formatter gets a projection of the visible columns, not the row object, and there is no per-column view or edit view. Row actions are a context menu, not a column. Clicks on an input inside a cell also reach the row's `click`, which opens the record by default.
+**Did** · `TokenEditFormatter` looks the catalogue up in the context, gets an editor object per row, and opens its own context with that editor as `data` and the screen's mode, so `ModeAltView` can pick the read or the edit view. The catalogue sets a no-op `click`, and re-renders the rows (`on.reset`) when the mode changes.
+**Fix** · a mode-aware cell: let a property's `view` (with `ModeAltView`) render in the table under the table's own `controllerMode`, and support action columns. An "inline edit" table mode would cover the rest.
