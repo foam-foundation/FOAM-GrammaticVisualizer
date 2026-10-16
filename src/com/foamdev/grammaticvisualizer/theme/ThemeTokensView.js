@@ -29,12 +29,16 @@ foam.CLASS({
 
   messages: [
     { name: 'OVERRIDES_TITLE', message: 'Overrides for this theme' },
-    { name: 'CATALOGUE_TITLE', message: 'Base tokens' }
+    { name: 'CATALOGUE_TITLE', message: 'Base tokens' },
+    { name: 'ONE_UNSAVED', message: '1 unsaved change' },
+    { name: 'N_UNSAVED', message: 'unsaved changes' }
   ],
 
   css: `
     << { display: flex; flex-direction: column; gap: $space-3; }
     <<sections { display: flex; flex-direction: column; gap: $space-2; }
+    /* Last in the tab and sticky to the bottom: the page header covers the top edge. */
+    <<status { position: sticky; bottom: $space-3; z-index: 1; display: flex; align-items: center; gap: $space-3; padding: $space-2 $space-3; background: $backgroundDefault; border: 1px solid $borderLight; border-radius: $radius; }
     /* Each title starts a new block: clear space above it, not just the row gap. */
     <<sections > .h500:not(:first-child) { margin-top: $space-6; }
   `,
@@ -47,6 +51,11 @@ foam.CLASS({
     { name: 'overridesView', documentation: 'The current TokenOverridesView, for saveAll.' },
     { name: 'catalogueView', documentation: 'The current TokenCatalogueView, for saveAll.' },
     {
+      class: 'Int',
+      name: 'dirtyCount',
+      documentation: 'Unsaved rows across both tables.'
+    },
+    {
       class: 'Boolean',
       name: 'editable',
       documentation: 'Overrides may be added or removed only while the record is being edited (ControllerMode EDIT or CREATE); VIEW is read-only, as the mode guide requires.',
@@ -54,7 +63,36 @@ foam.CLASS({
     }
   ],
 
+  actions: [
+    {
+      name: 'saveAll',
+      label: '✓ Save all',
+      buttonStyle: 'SECONDARY',
+      isAvailable: function(editable, dirtyCount) { return editable && dirtyCount > 0; },
+      code: function() {
+        if ( this.overridesView ) this.overridesView.saveAll();
+        if ( this.catalogueView ) this.catalogueView.saveAll();
+      }
+    },
+    {
+      name: 'discardAll',
+      label: '↺ Discard all',
+      buttonStyle: 'TERTIARY',
+      isAvailable: function(editable, dirtyCount) { return editable && dirtyCount > 0; },
+      code: function() {
+        if ( this.overridesView ) this.overridesView.discardAll();
+        if ( this.catalogueView ) this.catalogueView.discardAll();
+      }
+    }
+  ],
+
   listeners: [
+    {
+      name: 'onDirtyChange',
+      code: function() {
+        this.dirtyCount = ( this.overridesView ? this.overridesView.dirtyCount : 0 ) + ( this.catalogueView ? this.catalogueView.dirtyCount : 0 );
+      }
+    },
     {
       name: 'onThemePut',
       documentation: 'The page\'s Save put this theme: store the staged row changes too.',
@@ -79,12 +117,21 @@ foam.CLASS({
           var catalogue = self.TokenCatalogueView.create({ theme: data, editable$: self.editable$ }, self);
           self.overridesView = overrides;
           self.catalogueView = catalogue;
+          self.onDetach(overrides.dirtyCount$.sub(self.onDirtyChange));
+          self.onDetach(catalogue.dirtyCount$.sub(self.onDirtyChange));
+          self.onDirtyChange();
           return this.E().addClass(self.myClass('sections'))
             .start().addClass('h500').add(self.OVERRIDES_TITLE).end()
             .add(overrides)
             .start().addClass('h500').add(self.CATALOGUE_TITLE).end()
             .add(catalogue);
-        }));
+        }))
+        .startContext({ data: this })
+          .start().addClass(this.myClass('status')).show(this.slot(function(editable, dirtyCount) { return editable && dirtyCount > 0; }))
+            .start('span').addClass('p-semiBold').add(this.dirtyCount$.map(function(n) { return n === 1 ? self.ONE_UNSAVED : n + ' ' + self.N_UNSAVED; })).end()
+            .add(this.SAVE_ALL, this.DISCARD_ALL)
+          .end()
+        .endContext();
     }
   ]
 });

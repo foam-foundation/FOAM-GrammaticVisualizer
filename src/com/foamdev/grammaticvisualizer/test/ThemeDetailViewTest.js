@@ -160,9 +160,10 @@ foam.CLASS({
       // The row's action: Add override, enabled once a value changes; it stores the override, then reads Save override.
       var bb = function() { return rowNamed('borderBrand'); };
       var rowBtn = function(re) { return Array.from(bb().querySelectorAll('.foam-u2-ActionView')).find(function(b) { return re.test(b.textContent) && b.getClientRects().length > 0; }); };
-      await until(function() { return !! rowBtn(/Add override/); });
+      // A freshly drawn row shows both buttons until each action's isAvailable settles: wait for that.
+      await until(function() { return !! rowBtn(/Add override/) && ! rowBtn(/Save override/); });
       var addB = rowBtn(/Add override/);
-      x.test(!! addB && addB.disabled && ! rowBtn(/Save override/), 'a row without an override offers Add override, disabled until a value changes: add=' + !! addB + ' disabled=' + ( addB && addB.disabled ) + ' save=' + !! rowBtn(/Save override/) + ' values=' + catInputs(bb()).join(','));
+      x.test(!! addB && addB.disabled && ! rowBtn(/Save override/), 'a row without an override offers Add override, disabled until a value changes: add=' + !! addB + ' disabled=' + ( addB && addB.disabled ) + ' save=' + !! rowBtn(/Save override/) + ' values=' + catInputs(bb()).join(',') + ' dbg=' + Array.from(bb().querySelectorAll('.foam-u2-ActionView')).map(function(b) { return b.textContent.trim() + '[' + b.className.replace(/foam-u2-ActionView-?/g, '') + '|' + getComputedStyle(b).display + ']'; }).join(' '));
       var bbLight = bb().querySelector('input[type=color]');
       bbLight.value = '#112233'; bbLight.dispatchEvent(new Event('change'));
       await until(function() { return rowBtn(/Add override/) && ! rowBtn(/Add override/).disabled; });
@@ -172,16 +173,42 @@ foam.CLASS({
       await until(async function() { return !! ( await findRow('borderBrand') ); });
       var bbStored = await findRow('borderBrand');
       x.test(bbStored && bbStored.target === '#112233', 'Add override stores the row\'s values: ' + (bbStored && bbStored.target));
-      await until(function() { return !! rowBtn(/Save override/); });
+      await until(function() { return !! rowBtn(/Save override/) && ! rowBtn(/Add override/); });
       x.test(!! rowBtn(/Save override/) && ! rowBtn(/Add override/) && rowBtn(/Save override/).disabled, 'an overridden row offers Save override, disabled until changed again');
       // The page's Save (a put of this theme on themeDAO) stores staged row changes too.
       bbLight = bb().querySelector('input[type=color]');
       bbLight.value = '#445566'; bbLight.dispatchEvent(new Event('change'));
       await until(function() { return rowBtn(/Save override/) && ! rowBtn(/Save override/).disabled; });
+      // Status line and row marker while a change is staged.
+      var status = function() { return root.querySelector('.com-foamdev-grammaticvisualizer-theme-ThemeTokensView-status'); };
+      var statusShown = function() { return !! status() && status().getClientRects().length > 0; };
+      // The label is a mapped slot and can paint a frame after the show class: wait for both.
+      await until(function() { return statusShown() && /1 unsaved change/.test(status().textContent); });
+      x.test(statusShown() && /1 unsaved change/.test(status().textContent) && /Save all/.test(status().textContent) && /Discard all/.test(status().textContent),
+        'a staged change shows the status line with Save all and Discard all: ' + ( status() && status().textContent ) + ' n=' + root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeTokensView-status').length + ' cls=' + Array.from(root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeTokensView-status')).map(function(e) { return e.className + '|' + getComputedStyle(e).display + '|' + e.textContent.slice(0, 20); }).join(' ; '));
+      var marker = function() { return bb().querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-unsaved'); };
+      x.test(marker() && marker().getClientRects().length > 0, 'the changed row is marked Unsaved');
       await themeDAO.put(theme);
       await until(async function() { var o = await findRow('borderBrand'); return o && o.target === '#445566'; });
       var bbPaged = await findRow('borderBrand');
       x.test(bbPaged && bbPaged.target === '#445566', 'the page\'s Save stores a staged catalogue change: ' + (bbPaged && bbPaged.target));
+      await until(function() { return ! statusShown(); });
+      x.test(! statusShown(), 'after saving, the status line goes away');
+      // Discard on a row puts it back.
+      bbLight = bb().querySelector('input[type=color]');
+      bbLight.value = '#778899'; bbLight.dispatchEvent(new Event('change'));
+      await until(function() { return rowBtn(/Discard/) && ! rowBtn(/Discard/).disabled; });
+      rowBtn(/Discard/).click();
+      await until(function() { return /^#445566$/i.test(catInputs(bb())[0]); });
+      x.test(/^#445566$/i.test(catInputs(bb())[0]) && rowBtn(/Discard/).disabled, 'Discard puts the row back to its stored value: ' + catInputs(bb())[0]);
+      // Discard all from the status line.
+      bbLight = bb().querySelector('input[type=color]');
+      bbLight.value = '#778899'; bbLight.dispatchEvent(new Event('change'));
+      await until(statusShown);
+      Array.from(status().querySelectorAll('.foam-u2-ActionView')).find(function(b) { return /Discard all/.test(b.textContent); }).click();
+      await until(function() { return ! statusShown(); });
+      x.test(! statusShown() && /^#445566$/i.test(catInputs(bb())[0]), 'Discard all drops every staged change');
+      x.test(( await findRow('borderBrand') ).target === '#445566', 'discarding never touches the stored override');
 
       // Icons / Images: the 1200x900 logo stays inside its preview box, on a light and a dark surface.
       await select('Icons / Images', function() { return root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeImagesView-box img, .com-foamdev-grammaticvisualizer-theme-ThemeImagesView-box svg').length > 0; });

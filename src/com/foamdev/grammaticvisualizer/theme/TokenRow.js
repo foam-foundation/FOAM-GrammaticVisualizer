@@ -27,7 +27,14 @@ foam.CLASS({
       tableWidth: 260,
       // Natural order, so primary50 comes before primary100. The MDAO's id index sorts with this.
       comparePropertyValues: function(a, b) { return a.localeCompare(b, 'en', { numeric: true }); },
-      tableCellFormatter: function(value) { this.start('span').addClass('p-sm').style({ 'font-family': 'monospace' }).add('$' + value).end(); }
+      tableCellFormatter: function(value) {
+        this.start('span').addClass('p-sm').style({ 'font-family': 'monospace' }).add('$' + value).end();
+        // An unsaved-changes marker next to the name: the Override column has no room for it.
+        var cat = this.__subContext__.tokenCatalogue;
+        if ( cat && value ) {
+          this.start('span').addClass('p-sm', cat.myClass('unsaved')).show(cat.editFor(value).dirty$).add('● ' + cat.UNSAVED).end();
+        }
+      }
     },
     {
       class: 'String',
@@ -52,7 +59,7 @@ foam.CLASS({
       name: 'override',
       documentation: 'Not data: the column for the row\'s Add / Save override action (EDIT) or an "Overridden" note (VIEW).',
       transient: true,
-      tableWidth: 200,
+      tableWidth: 360,
       tableCellFormatter: { class: 'com.foamdev.grammaticvisualizer.theme.TokenEditFormatter' }
     }
   ]
@@ -84,7 +91,9 @@ foam.CLASS({
         if ( axiom.name !== 'override' ) {
           this.add(edit[axiom.name === 'light' ? 'LIGHT' : 'DARK']);
         } else if ( cat.editable ) {
-          this.add(edit.ADD_OVERRIDE, edit.SAVE_OVERRIDE);
+          this.start('span').addClass(cat.myClass('actions'))
+            .add(edit.ADD_OVERRIDE, edit.SAVE_OVERRIDE, edit.DISCARD)
+          .end();
         } else if ( edit.overridden ) {
           this.start('span').addClass('p-sm').add(cat.OVERRIDDEN).end();
         }
