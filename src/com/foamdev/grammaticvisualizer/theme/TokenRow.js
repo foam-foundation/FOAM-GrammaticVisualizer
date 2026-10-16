@@ -16,7 +16,7 @@ foam.CLASS({
 
   ids: [ 'name' ],
 
-  tableColumns: [ 'name', 'light', 'dark', 'group' ],
+  tableColumns: [ 'name', 'light', 'dark', 'group', 'override' ],
   searchColumns: [ 'name' ],
 
   properties: [
@@ -25,6 +25,8 @@ foam.CLASS({
       name: 'name',
       label: 'Token',
       tableWidth: 260,
+      // Natural order, so primary50 comes before primary100. The MDAO's id index sorts with this.
+      comparePropertyValues: function(a, b) { return a.localeCompare(b, 'en', { numeric: true }); },
       tableCellFormatter: function(value) { this.start('span').addClass('p-sm').style({ 'font-family': 'monospace' }).add('$' + value).end(); }
     },
     {
@@ -37,13 +39,21 @@ foam.CLASS({
       class: 'String',
       name: 'light',
       documentation: 'Value in the light colour mode.',
-      tableCellFormatter: { class: 'com.foamdev.grammaticvisualizer.theme.TokenValueFormatter' }
+      tableCellFormatter: { class: 'com.foamdev.grammaticvisualizer.theme.TokenEditFormatter' }
     },
     {
       class: 'String',
       name: 'dark',
       documentation: 'Value in the dark colour mode.',
-      tableCellFormatter: { class: 'com.foamdev.grammaticvisualizer.theme.TokenValueFormatter' }
+      tableCellFormatter: { class: 'com.foamdev.grammaticvisualizer.theme.TokenEditFormatter' }
+    },
+    {
+      class: 'String',
+      name: 'override',
+      documentation: 'Not data: the column for the row\'s Add / Save override action (EDIT) or an "Overridden" note (VIEW).',
+      transient: true,
+      tableWidth: 200,
+      tableCellFormatter: { class: 'com.foamdev.grammaticvisualizer.theme.TokenEditFormatter' }
     }
   ]
 });
@@ -51,24 +61,34 @@ foam.CLASS({
 
 foam.CLASS({
   package: 'com.foamdev.grammaticvisualizer.theme',
-  name: 'TokenValueFormatter',
+  name: 'TokenEditFormatter',
   extends: 'foam.u2.view.FnFormatter',
 
   documentation: `
-    A table cell for a token value: a swatch when the value reads as a colour
-    (hex, rgb(), hsl(), currentColor), then the value in monospace. Decided from
-    the value, not a row flag: the table hands formatters a projection of the
-    visible columns, so a hidden flag would not be there. The CSS lives on
-    TokenCatalogueView (a formatter is not an Element, its css: is not installed).
+    A catalogue cell drawn from the row's editor (TokenCatalogueView.Edit), so
+    a cell has one view in VIEW mode and another in EDIT mode (ModeAltView).
+    foam's table renders every cell in a forced controllerMode VIEW sub-context
+    and has no per-column edit view (gap 26), so the formatter looks up the
+    catalogue in the context and opens its own context with the editor as data
+    and the catalogue's mode.
   `,
 
   properties: [
     {
       name: 'f',
-      value: function(value) {
-        var base = 'com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-';
-        if ( value && /^(#|rgb|hsl|currentColor$)/i.test(value) ) this.start('span').addClass(base + 'swatch').style({ 'background-color': value }).end();
-        this.start('span').addClass('p-sm', base + 'value').add(value).end();
+      value: function(value, obj, axiom) {
+        var cat  = this.__subContext__.tokenCatalogue;
+        var edit = cat && obj && obj.name && cat.editFor(obj.name);
+        if ( ! edit ) { this.add(value); return; }
+        this.startContext({ data: edit, controllerMode: cat.cellMode() });
+        if ( axiom.name !== 'override' ) {
+          this.add(edit[axiom.name === 'light' ? 'LIGHT' : 'DARK']);
+        } else if ( cat.editable ) {
+          this.add(edit.ADD_OVERRIDE, edit.SAVE_OVERRIDE);
+        } else if ( edit.overridden ) {
+          this.start('span').addClass('p-sm').add(cat.OVERRIDDEN).end();
+        }
+        this.endContext();
       }
     }
   ]

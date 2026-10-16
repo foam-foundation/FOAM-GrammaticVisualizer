@@ -12,7 +12,7 @@ foam.CLASS({
   documentation: `
     The CSS tokens tab of a Theme: the current theming system. The theme's
     CSSTokenOverride rows (TokenOverridesView) above the catalogue of base
-    tokens to pick from (TokenCatalogueView). Not a Theme section of its own;
+    tokens, where new overrides are added (TokenCatalogueView). Not a Theme section of its own;
     ThemeDetailView adds a transient section for it next to Colours.
   `,
 
@@ -31,6 +31,9 @@ foam.CLASS({
   css: `
     << { display: flex; flex-direction: column; gap: $space-3; }
     <<help { color: $textSecondary; }
+    <<sections { display: flex; flex-direction: column; gap: $space-2; }
+    /* Each title starts a new block: clear space above it, not just the row gap. */
+    <<sections > .h500:not(:first-child) { margin-top: $space-6; }
   `,
 
   properties: [
@@ -56,12 +59,8 @@ foam.CLASS({
         .add(this.slot(function(data) {
           if ( ! data ) return;
           var overrides = self.TokenOverridesView.create({ themeId: data.id, editable$: self.editable$ }, self);
-          var catalogue = self.TokenCatalogueView.create({
-            theme: data,
-            editable$: self.editable$,
-            onPick: function(name, light, dark) { overrides.copyFrom({ source: name, light: light, dark: dark }); }
-          }, self);
-          return this.E()
+          var catalogue = self.TokenCatalogueView.create({ theme: data, editable$: self.editable$ }, self);
+          return this.E().addClass(self.myClass('sections'))
             .start().addClass('h500').add(self.OVERRIDES_TITLE).end()
             .add(overrides)
             .start().addClass('h500').add(self.CATALOGUE_TITLE).end()

@@ -13,15 +13,19 @@ foam.CLASS({
     Every base token in foam.u2.CSSTokens, resolved for the theme being viewed
     in light and in dark, as foam's own DAO table: an in-memory DAO of TokenRow
     behind a DAOBrowserView, so search, sorting, column hiding and the group
-    tabs (one canned query per group) come from the framework. A row click
-    hands (name, light, dark) to onPick while the theme is being edited, which
-    the overrides form uses to prefill itself. Resolution goes through
+    tabs (one canned query per group) come from the framework. In EDIT mode a
+    row's Light and Dark cells are inputs and its Override cell has an Add /
+    Save override action that puts a CSSTokenOverride; each row's state lives
+    in an Edit object (see TokenEditFormatter). Resolution goes through
     foam.CSS.returnTokenValue with the theme (and its activeVariants) in a
     sub-context, so the running theme's CSSTokenOverride rows show through.
   `,
 
+  imports: [ 'cssTokenOverrideDAO?', 'ctrl?' ],
+
   requires: [
     'com.foamdev.grammaticvisualizer.theme.TokenRow',
+    'foam.core.theme.customisation.CSSTokenOverride',
     'foam.comics.v2.CannedQuery',
     'foam.comics.v2.DAOBrowserView',
     'foam.comics.v2.DAOControllerConfig',
@@ -30,15 +34,88 @@ foam.CLASS({
     'foam.mlang.predicate.False',
     'foam.u2.CSSToken',
     'foam.u2.CSSTokens',
+    'foam.u2.ControllerMode',
     'foam.u2.memento.Memento'
   ],
 
   implements: [ 'foam.mlang.Expressions' ],
 
+  classes: [
+    {
+      name: 'Edit',
+      documentation: `
+        One catalogue row's editor. light and dark pair a read view (TokenCellView)
+        with an input (a colour picker for #rrggbb values, else a text field)
+        through ModeAltView, so the ControllerMode in the cell's context picks
+        one. Nothing is stored until the row's action runs.
+      `,
+      properties: [
+        { name: 'catalogue', hidden: true },
+        { class: 'String', name: 'name' },
+        { class: 'String', name: 'savedLight', documentation: 'Light value as resolved for the theme.' },
+        { class: 'String', name: 'savedDark', documentation: 'Dark value as resolved for the theme.' },
+        { class: 'Boolean', name: 'overridden', documentation: 'The theme has a CSSTokenOverride row for this token.' },
+        {
+          class: 'String',
+          name: 'light',
+          view: function(_, X) { return X.data.valueView(); }
+        },
+        {
+          class: 'String',
+          name: 'dark',
+          view: function(_, X) { return X.data.valueView(); }
+        },
+        {
+          class: 'Boolean',
+          name: 'dirty',
+          // Case-blind: a colour input reports hex in lower case.
+          expression: function(light, dark, savedLight, savedDark) {
+            return light.toLowerCase() !== savedLight.toLowerCase() || dark.toLowerCase() !== savedDark.toLowerCase();
+          }
+        }
+      ],
+      methods: [
+        function valueView() {
+          var colour = /^#[0-9a-f]{6}$/i.test(this.savedLight) && ( ! this.savedDark || /^#[0-9a-f]{6}$/i.test(this.savedDark) );
+          return {
+            class: 'foam.u2.view.ModeAltView',
+            readView: { class: 'com.foamdev.grammaticvisualizer.theme.TokenCellView' },
+            writeView: colour ? { class: 'foam.u2.view.ColorPicker' } : { class: 'foam.u2.TextField' }
+          };
+        },
+        function reset() {
+          this.light = this.savedLight;
+          this.dark  = this.savedDark;
+        }
+      ],
+      actions: [
+        {
+          name: 'addOverride',
+          label: '✓ Add override',
+          toolTip: 'Store these values as an override for this theme',
+          buttonStyle: 'SECONDARY',
+          isAvailable: function(overridden) { return ! overridden; },
+          isEnabled: function(dirty) { return dirty; },
+          code: function() { return this.catalogue.save(this); }
+        },
+        {
+          name: 'saveOverride',
+          label: '✓ Save override',
+          toolTip: 'Update this theme\'s override with these values',
+          buttonStyle: 'SECONDARY',
+          isAvailable: function(overridden) { return overridden; },
+          isEnabled: function(dirty) { return dirty; },
+          code: function() { return this.catalogue.save(this); }
+        }
+      ]
+    }
+  ],
+
   messages: [
-    { name: 'HELP', message: 'Base tokens from foam.u2.CSSTokens, resolved for this theme. Click a row to prefill the override form.' },
+    { name: 'HELP', message: 'Base tokens from foam.u2.CSSTokens, resolved for this theme. Change a value, then press Add override on that row.' },
     { name: 'HELP_RO', message: 'Base tokens from foam.u2.CSSTokens, resolved for this theme. Press Edit to add overrides.' },
     { name: 'ALL', message: 'All' },
+    { name: 'OVERRIDDEN', message: 'Overridden' },
     { name: 'SEARCH_PLACEHOLDER', message: 'Search tokens' }
   ],
 
@@ -47,11 +124,11 @@ foam.CLASS({
       name: 'GROUP_RULES',
       documentation: 'First matching prefix wins; order is the tab order.',
       value: [
-        [ 'Brand',        /^(primary|info$)/ ],
+        [ 'Brand',        /^primary/ ],
         [ 'Surfaces',     /^background/ ],
         [ 'Text',         /^(text|link$|dropdownIcon$)/ ],
         [ 'Borders',      /^border/ ],
-        [ 'Status',       /^(status|success|warn|destructive)/ ],
+        [ 'Status',       /^(status|success|warn|destructive|info$)/ ],
         [ 'Hints',        /^hint/ ],
         [ 'Typography',   /^(font-|header-|body-|font1$)/ ],
         [ 'Sizing and shape', /^(input|radius|shadow|colorScheme$|space-)/ ],
@@ -67,10 +144,7 @@ foam.CLASS({
     /* The table scrolls inside a bounded box; unbounded, LazyScrollManager has no scroll container
        and lays out every row (14,000px for 250 tokens) and the whole page scrolls instead. */
     << .foam-comics-v2-DAOBrowserView { height: 60vh; min-height: 32rem; }
-    <<pickable .foam-u2-table-TableView-tbody .foam-u2-table-TableView-tr { cursor: pointer; }
-    /* Cells drawn by TokenValueFormatter (TokenRow.js). */
-    <<swatch { display: inline-block; width: 1rem; height: 1rem; border-radius: $radius; border: 1px solid $borderLight; vertical-align: middle; margin-right: $space-1; }
-    <<value { font-family: monospace; color: $textSecondary; }
+    << .foam-u2-view-ColorPicker { width: 4rem; height: 2.8rem; padding: $space-0_5; }
   `,
 
   properties: [
@@ -81,7 +155,7 @@ foam.CLASS({
     {
       class: 'Boolean',
       name: 'editable',
-      documentation: 'Rows prefill the override form only while the theme is being edited.',
+      documentation: 'Cells are inputs and rows have an Add / Save override action only while the theme is being edited.',
       value: true
     },
     {
@@ -93,9 +167,19 @@ foam.CLASS({
       view: { class: 'foam.u2.ClearableSearchField', onKey: true, placeholder: 'Search tokens' }
     },
     {
-      class: 'Function',
-      name: 'onPick',
-      value: function(name, light, dark) {}
+      name: 'edits',
+      documentation: 'Edit per token name, made on first render of its row and kept so unsaved input survives the table re-rendering rows.',
+      factory: function() { return {}; }
+    },
+    {
+      name: 'resolved',
+      documentation: 'Resolved row values by token name, filled by the dao factory.',
+      factory: function() { return {}; }
+    },
+    {
+      name: 'overriddenNames',
+      documentation: 'Token names that have a CSSTokenOverride row for this theme.',
+      factory: function() { return {}; }
     },
     {
       name: 'dao',
@@ -105,7 +189,7 @@ foam.CLASS({
         var light  = this.contextFor('light');
         var dark   = this.contextFor('dark');
         var rows   = this.CSSTokens.getAxiomsByClass(this.CSSToken).map(function(a) {
-          return {
+          return self.resolved[a.name] = {
             name:  a.name,
             group: self.groupOf(a.name),
             light: self.resolve(a.name, light),
@@ -118,7 +202,7 @@ foam.CLASS({
     {
       name: 'viewDao',
       documentation: 'What the table reads: the token DAO, or the token DAO narrowed by the search. Swapped in place; DAOBrowserView resets searchPredicate itself on a tab change, so it cannot carry the search.',
-      factory: function() { return this.ProxyDAO.create({ delegate: this.dao }, this); }
+      factory: function() { return this.ProxyDAO.create({ delegate: this.sorted() }, this); }
     },
     {
       name: 'config',
@@ -157,8 +241,44 @@ foam.CLASS({
       mergeDelay: 150,
       code: function() {
         var text = this.filter.trim();
-        this.viewDao.delegate = text ? this.dao.where(this.KEYWORD(text)) : this.dao;
+        this.viewDao.delegate = text ? this.sorted().where(this.KEYWORD(text)) : this.sorted();
         this.viewDao.on.reset.pub();
+      }
+    },
+    {
+      name: 'onModeChange',
+      documentation: 'Leaving EDIT drops unsaved input; the table re-renders its rows so each cell picks its view for the new mode.',
+      code: function() {
+        if ( ! this.editable ) Object.values(this.edits).forEach(function(e) { e.reset(); });
+        this.viewDao.on.reset.pub();
+      }
+    },
+    {
+      name: 'onOverrides',
+      isMerged: true,
+      mergeDelay: 100,
+      documentation: 'Override rows changed (here or in the overrides table): reload which tokens are overridden and re-resolve the values.',
+      code: async function() {
+        var s = await this.cssTokenOverrideDAO.where(this.EQ(this.CSSTokenOverride.THEME, this.theme.id)).select();
+        var names = {};
+        s.array.forEach(function(o) { names[o.source] = true; });
+        this.overriddenNames = names;
+        var light = this.contextFor('light');
+        var dark  = this.contextFor('dark');
+        var rows  = ( await this.dao.select() ).array;
+        for ( var i = 0 ; i < rows.length ; i++ ) {
+          var r = rows[i];
+          var l = this.resolve(r.name, light), d = this.resolve(r.name, dark);
+          var e = this.edits[r.name];
+          if ( e ) {
+            var clean = ! e.dirty;
+            e.overridden = !! names[r.name];
+            e.savedLight = l; e.savedDark = d;
+            if ( clean ) e.reset();
+          }
+          this.resolved[r.name] = { name: r.name, group: r.group, light: l, dark: d };
+          if ( l !== r.light || d !== r.dark ) await this.dao.put(r.clone().copyFrom({ light: l, dark: d }));
+        }
       }
     }
   ],
@@ -167,6 +287,53 @@ foam.CLASS({
     function init() {
       this.SUPER();
       this.onDetach(this.filter$.sub(this.onFilter));
+      this.onDetach(this.editable$.sub(this.onModeChange));
+      if ( this.cssTokenOverrideDAO && this.theme ) {
+        this.onDetach(this.cssTokenOverrideDAO.on.sub(this.onOverrides));
+        this.onOverrides();
+      }
+    },
+
+    function sorted() {
+      // orderBy(NAME) sorts with the property's comparePropertyValues (natural: primary50 before
+      // primary100); the MDAO's own id index sorts plain strings.
+      return this.dao.orderBy(this.TokenRow.NAME);
+    },
+
+    function cellMode() {
+      return this.editable ? this.ControllerMode.EDIT : this.ControllerMode.VIEW;
+    },
+
+    function editFor(name) {
+      var e = this.edits[name];
+      if ( e ) return e;
+      // The table hands formatters a projection of the visible columns; take the values from the resolved rows.
+      var row = this.resolved[name] || {};
+      e = this.edits[name] = this.Edit.create({
+        catalogue: this, name: name,
+        savedLight: row.light || '', savedDark: row.dark || '',
+        overridden: !! this.overriddenNames[name]
+      });
+      e.reset();
+      return e;
+    },
+
+    async function save(e) {
+      // Dark is stored only when it differs from what light alone would give, so a token
+      // with no dark value of its own keeps following light.
+      var darkOwn = e.dark && ! ( e.dark === e.savedDark && e.savedDark === e.savedLight ) && e.dark !== e.light;
+      await this.cssTokenOverrideDAO.put(this.CSSTokenOverride.create({
+        theme: this.theme.id,
+        source: e.name,
+        target: e.light,
+        variants: darkOwn ? { dark: e.dark } : {}
+      }));
+      e.savedLight = e.light;
+      e.savedDark  = darkOwn ? e.dark : e.light;
+      e.dark       = e.savedDark;
+      e.overridden = true;
+      // CSSTokenOverrideService reloads on the DAO event; installed CSS is re-expanded only on themeChange.
+      if ( this.ctrl && this.ctrl.pub ) this.ctrl.pub('themeChange');
     },
 
     function groupOf(name) {
@@ -192,17 +359,19 @@ foam.CLASS({
     function render() {
       var self = this;
       this.addClass(this.myClass())
-        .enableClass(this.myClass('pickable'), this.editable$)
         .start().addClass('p', this.myClass('help')).add(this.editable$.map(function(e) { return e ? self.HELP : self.HELP_RO; })).end()
-        .startContext({ data: this })
+        // The search box is a control in every mode, not record data: keep it out of VIEW's read-only views.
+        .startContext({ data: this, controllerMode: this.ControllerMode.EDIT })
           .start(this.FILTER).addClass(this.myClass('search')).end()
         .endContext()
         // Own memento root: the search box and the group tabs are memorable and would otherwise
         // write into the page URL and fight the Theme screen's own tabs (gap 16).
-        // click: what a table row does; the Clickable mixin imports it from the context.
+        // click: what a table row does (the Clickable mixin imports it); a no-op so a click on a
+        // row's input does not open the row. tokenCatalogue: how TokenEditFormatter finds this view.
         .startContext({
           memento_: this.Memento.create(),
-          click: function(row) { if ( self.editable && row ) self.onPick(row.name, row.light, row.dark); }
+          click: function() {},
+          tokenCatalogue: this
         })
           .tag(this.DAOBrowserView, { data: this.viewDao, config: this.config })
         .endContext();

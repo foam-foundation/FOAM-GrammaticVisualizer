@@ -10,8 +10,8 @@ foam.CLASS({
   extends: 'foam.u2.View',
 
   documentation: `
-    The CSSTokenOverride rows of one theme, as a table with a swatch per value,
-    and a one-line form to add or replace one. In EDIT mode each row's cells
+    The CSSTokenOverride rows of one theme, as a table with a swatch per value.
+    New overrides are added from the token catalogue below. In EDIT mode each row's cells
     are inputs (ModeAltView swaps TokenCellView for an editor) and an edit is
     saved to the DAO when it commits. A row's target is the value for
     every colour mode; variants.dark wins in dark mode. foam3 keeps these rows
@@ -26,8 +26,7 @@ foam.CLASS({
   requires: [
     'com.foamdev.grammaticvisualizer.theme.TokenCellView',
     'foam.core.theme.customisation.CSSTokenOverride',
-    'foam.u2.ControllerMode',
-    'foam.u2.view.ColorPicker'
+    'foam.u2.ControllerMode'
   ],
 
   classes: [
@@ -134,9 +133,6 @@ foam.CLASS({
     <<table td { padding: $space-1 $space-2; border-bottom: 1px solid $borderLight; vertical-align: middle; }
     <<token { font-family: monospace; }
     <<table td input[type=text] { width: 100%; font-family: monospace; }
-    <<form { display: flex; flex-wrap: wrap; gap: $space-2; align-items: flex-end; }
-    <<cell { display: flex; flex-direction: column; gap: $space-1; }
-    <<cell input[type=text] { width: 14rem; }
     <<empty { color: $textTertiary; }
   `,
 
@@ -145,29 +141,13 @@ foam.CLASS({
     {
       class: 'Boolean',
       name: 'editable',
-      documentation: 'Add form and per-row remove shown only while the theme is being edited.',
+      documentation: 'Rows are inputs and have a remove action only while the theme is being edited.',
       value: true
     },
     {
       class: 'Array',
       name: 'rows',
       documentation: 'CSSTokenOverride rows for themeId, refreshed on every DAO event.'
-    },
-    {
-      class: 'String',
-      name: 'source',
-      label: 'Token',
-      view: { class: 'foam.u2.TextField', placeholder: 'primary500', onKey: true }
-    },
-    {
-      class: 'String',
-      name: 'light',
-      view: { class: 'foam.u2.view.ColorPicker', onKey: true }
-    },
-    {
-      class: 'String',
-      name: 'dark',
-      view: { class: 'foam.u2.view.ColorPicker', onKey: true }
     }
   ],
 
@@ -209,49 +189,12 @@ foam.CLASS({
                 .endContext()
               .end();
             }).end();
-        }))
-        .startContext({ data: this })
-          .start().addClass(this.myClass('form')).show(this.editable$)
-            .call(function() { self.renderCell(this, self.COL_SOURCE, self.SOURCE); })
-            .call(function() { self.renderCell(this, self.COL_LIGHT, self.LIGHT); })
-            .call(function() { self.renderCell(this, self.COL_DARK, self.DARK); })
-            .add(this.ADD_OVERRIDE)
-          .end()
-        .endContext();
+        }));
     },
 
     function recolour() {
       /** CSSTokenOverrideService reloads its cache on a DAO event, but installed CSS is only re-expanded on themeChange. */
       if ( this.ctrl && this.ctrl.pub ) this.ctrl.pub('themeChange');
-    },
-
-    function renderCell(form, label, prop) {
-      // A labelled control; .add(PROP) alone gives the bare input, no PropertyBorder.
-      form.start().addClass(this.myClass('cell'))
-        .start('span').addClass('p-label').add(label).end()
-        .add(prop)
-      .end();
-    }
-  ],
-
-  actions: [
-    {
-      name: 'addOverride',
-      label: 'Add override',
-      buttonStyle: 'PRIMARY',
-      isAvailable: function(editable) { return editable; },
-      isEnabled: function(source, light, dark) { return !! source.trim() && !! ( light || dark ); },
-      code: async function() {
-        var o = this.CSSTokenOverride.create({
-          theme: this.themeId,
-          source: this.source.trim().replace(/^\$/, ''),
-          target: this.light,
-          variants: this.dark ? { dark: this.dark } : {}
-        });
-        await this.cssTokenOverrideDAO.put(o);
-        this.source = ''; this.light = ''; this.dark = '';
-        this.recolour();
-      }
     }
   ],
 

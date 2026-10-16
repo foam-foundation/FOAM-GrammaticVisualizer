@@ -103,10 +103,9 @@ foam.CLASS({
       removeBtn.click();
       await until(function() { return rows().length === 1; });
       x.test(rows().length === 1, 'the row action removes the override: ' + rows().length);
-      var addBtn = function() { return Array.from(tov().querySelectorAll('.foam-u2-ActionView')).find(function(b) { return /Add override/.test(b.textContent); }); };
-      x.test(!! addBtn() && addBtn().disabled, 'Add override is disabled until a token and a value are given');
+      x.test(! tov().querySelector('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-form'), 'no separate add form: overrides are added from the catalogue');
 
-      // Token catalogue: foam's DAO table over TokenRow; group tabs are canned queries; search; a row click prefills the form.
+      // Token catalogue: foam's DAO table over TokenRow; group tabs are canned queries; search; cells edit in place in EDIT mode.
       var cat = function() { return root.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView'); };
       x.test(!! cat(), 'the CSS tokens tab hosts the catalogue');
       // foam's table pages its rows through LazyScrollManager; count what is rendered, not the DAO.
@@ -117,20 +116,29 @@ foam.CLASS({
       x.test(!! cat().querySelector('.foam-u2-table-TableView'), 'the catalogue is foam.u2.table.TableView');
       var tabs = Array.from(cat().querySelectorAll('.foam-u2-view-TabChoiceView label')).map(function(l) { return l.textContent.trim(); });
       x.test(tabs[0] === 'All' && tabs.indexOf('Brand') > 0 && tabs.indexOf('Palette ramps') > 0, 'one canned-query tab per group, All first: ' + tabs.join(', '));
+      // EDIT mode: value cells are inputs holding the resolved values.
+      var catInputs = function(r) { return Array.from(r.querySelectorAll('input')).map(function(i) { return i.value; }); };
       var p500 = rowNamed('primary500');
       x.test(!! p500, 'primary500 is listed');
-      var vals = p500 && Array.from(p500.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-value')).map(function(e) { return e.textContent; });
-      x.test(vals && /^#/.test(vals[0]) && /^#/.test(vals[1]), 'primary500 resolves to hex values in both modes: ' + vals);
+      var vals = p500 && catInputs(p500);
+      x.test(vals && vals.length === 2 && /^#/.test(vals[0]) && /^#/.test(vals[1]) && p500.querySelectorAll('input[type=color]').length === 2, 'EDIT mode: a colour token\'s light and dark are colour pickers with its hex values: ' + vals);
       var bgd = rowNamed('backgroundDefault');
-      var bvals = bgd && Array.from(bgd.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-value')).map(function(e) { return e.textContent; });
+      var bvals = bgd && catInputs(bgd);
       x.test(bvals && bvals[0] !== bvals[1], 'a token with a dark variant shows two different values: ' + bvals);
-      x.test(p500.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-swatch').length === 2, 'colour tokens get a swatch per mode');
       var ih = rowNamed('inputHeight');
-      x.test(ih && ih.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-swatch').length === 0 && /34px/.test(ih.textContent), 'a size token shows its value without a swatch');
+      x.test(ih && ih.querySelectorAll('input[type=color]').length === 0 && catInputs(ih)[0] === '34px', 'EDIT mode: a size token is a text field: ' + (ih && catInputs(ih)));
+      // Natural order: primary50 before primary100.
+      var names = Array.from(catRows()).map(function(r) { var m = r.textContent.match(/\$(primary\d+)/); return m && m[1]; }).filter(Boolean);
+      x.test(names.indexOf('primary50') >= 0 && names.indexOf('primary50') < names.indexOf('primary100'), 'tokens sort in natural order: ' + names.slice(0, 3).join(', '));
       // Group tab: Borders alone.
       Array.from(cat().querySelectorAll('.foam-u2-view-TabChoiceView label')).find(function(l) { return l.textContent.trim() === 'Borders'; }).querySelector('input').click();
       await until(function() { return catRows().length > 0 && catRows().length < 20; }, 5000);
       x.test(catRows().length === 8 && Array.from(catRows()).every(function(r) { return /\$border/.test(r.textContent); }), 'a group tab filters to that group: ' + catRows().length);
+      Array.from(cat().querySelectorAll('.foam-u2-view-TabChoiceView label')).find(function(l) { return l.textContent.trim() === 'Status'; }).querySelector('input').click();
+      await until(function() { return !! rowNamed('info'); }, 5000);
+      x.test(!! rowNamed('info'), '$info is in the Status group');
+      Array.from(cat().querySelectorAll('.foam-u2-view-TabChoiceView label')).find(function(l) { return l.textContent.trim() === 'Borders'; }).querySelector('input').click();
+      await until(function() { return !! rowNamed('borderBrand'); }, 5000);
       // Search: the catalogue's own field (a plain TextField with onKey) sets the table's searchPredicate to a KEYWORD.
       var searchEl = cat().querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-search input, input.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-search');
       x.test(!! searchEl && ! cat().querySelector('.foam-u2-filter-FilterView'), 'the catalogue has its own search field and no foam query bar');
@@ -138,11 +146,22 @@ foam.CLASS({
       searchEl.dispatchEvent(new Event('input', { bubbles: true }));
       await until(function() { return catRows().length === 4; }, 6000);
       x.test(catRows().length === 4 && Array.from(catRows()).every(function(r) { return /borderBrand/.test(r.textContent); }), 'a bare word filters the catalogue: ' + catRows().length);
-      Array.from(catRows()).find(function(r) { return /borderBrand/.test(r.textContent); }).click();
-      await wait(50);
-      var srcEl = tov().querySelector('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-form input[name=source]');
-      x.test(srcEl && /^borderBrand/.test(srcEl.value), 'clicking a row prefills the override form: ' + (srcEl && srcEl.value));
-      x.test(addBtn() && ! addBtn().disabled, 'the form is ready to add after a pick');
+      // The row's action: Add override, enabled once a value changes; it stores the override, then reads Save override.
+      var bb = function() { return rowNamed('borderBrand'); };
+      var rowBtn = function(re) { return Array.from(bb().querySelectorAll('.foam-u2-ActionView')).find(function(b) { return re.test(b.textContent) && b.getClientRects().length > 0; }); };
+      await until(function() { return !! rowBtn(/Add override/); });
+      var addB = rowBtn(/Add override/);
+      x.test(!! addB && addB.disabled && ! rowBtn(/Save override/), 'a row without an override offers Add override, disabled until a value changes: add=' + !! addB + ' disabled=' + ( addB && addB.disabled ) + ' save=' + !! rowBtn(/Save override/) + ' values=' + catInputs(bb()).join(','));
+      var bbLight = bb().querySelector('input[type=color]');
+      bbLight.value = '#112233'; bbLight.dispatchEvent(new Event('change'));
+      await until(function() { return rowBtn(/Add override/) && ! rowBtn(/Add override/).disabled; });
+      x.test(rowBtn(/Add override/) && ! rowBtn(/Add override/).disabled, 'changing a value enables Add override');
+      rowBtn(/Add override/).click();
+      await until(async function() { return !! ( await findRow('borderBrand') ); });
+      var bbStored = await findRow('borderBrand');
+      x.test(bbStored && bbStored.target === '#112233', 'Add override stores the row\'s values: ' + (bbStored && bbStored.target));
+      await until(function() { return !! rowBtn(/Save override/); });
+      x.test(!! rowBtn(/Save override/) && ! rowBtn(/Add override/) && rowBtn(/Save override/).disabled, 'an overridden row offers Save override, disabled until changed again');
 
       // Icons / Images: the 1200x900 logo stays inside its preview box, on a light and a dark surface.
       await select('Icons / Images', function() { return root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeImagesView-box img, .com-foamdev-grammaticvisualizer-theme-ThemeImagesView-box svg').length > 0; });
@@ -171,7 +190,7 @@ foam.CLASS({
       await wait(50);
       x.test(sample.getBoundingClientRect().height === 48, 'the sample follows the field');
 
-      // ControllerMode: in VIEW the overrides are read-only (no form, no remove, rows not pickable); EDIT has them.
+      // ControllerMode: in VIEW the overrides and the catalogue are read-only (read views, no actions).
       var yv = x.createSubContext(Object.assign({ controllerMode: this.ControllerMode.VIEW, cssTokenOverrideDAO: dao }, stubs));
       var vv = this.ThemeDetailView.create({ data: theme, of: this.Theme }, yv);
       vv.write();
@@ -180,17 +199,22 @@ foam.CLASS({
       Array.from(rootV.querySelectorAll('.foam-u2-SegmentedTabs-tabRow > *')).find(function(e) { return e.textContent.trim() === 'CSS tokens'; }).click();
       await until(function() { return rootV.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row').length > 0; });
       var shown = function(el) { return !! el && el.getClientRects().length > 0; };
-      x.test(! shown(rootV.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-form')), 'VIEW mode: no add form');
-      var rowV = rootV.querySelector('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row');
+      var rowV = Array.from(rootV.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row')).find(function(r) { return /primary400/.test(r.textContent); });
       x.test(! rowV.querySelector('input[type=text], input[type=color]') && /\$primary400/.test(rowV.textContent) && /#654321/.test(rowV.textContent) && /#abcdef/.test(rowV.textContent),
         'VIEW mode: cells are read views (token name, swatch and value), no inputs: ' + rowV.textContent);
       x.test(rowV.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCellView-swatch').length === 2, 'VIEW mode: light and dark show a swatch');
       x.test(! shown(rootV.querySelector('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row .foam-u2-ActionView')), 'VIEW mode: no remove action on rows');
-      x.test(! rootV.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-pickable'), 'VIEW mode: catalogue rows are not pickable');
+      var catV = rootV.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView');
+      await until(function() { return catV.querySelectorAll('.foam-u2-table-TableView-tbody .foam-u2-table-TableView-tr').length >= 20; }, 5000);
+      x.test(!! catV.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-search input, input.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-search'), 'VIEW mode: the search box is still an input');
+      x.test(! catV.querySelector('.foam-u2-table-TableView-tbody input') && ! /Add override|Save override/.test(catV.textContent), 'VIEW mode: catalogue cells are read views, no inputs or row actions');
+      var p400V = Array.from(catV.querySelectorAll('.foam-u2-table-TableView-tbody .foam-u2-table-TableView-tr')).find(function(r) { return /\$primary400/.test(r.textContent); });
+      x.test(p400V && /Overridden/.test(p400V.textContent) && p400V.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCellView-swatch').length === 2, 'VIEW mode: an overridden token says so and shows a swatch per mode');
+      var sw = p400V && p400V.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCellView-swatch');
+      await until(function() { return sw && sw.getBoundingClientRect().width > 0; });
+      var swW = sw ? sw.getBoundingClientRect().width : 0;
+      x.test(swW >= 15, 'VIEW mode: the swatch is at least 15px wide: ' + swW);
       x.test(/Press Edit/.test(rootV.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-help').textContent), 'VIEW mode: the help says to press Edit');
-      // The EDIT view sits on another tab now, so test presence and the display rule rather than client rects.
-      var editForm = root.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-form');
-      x.test(!! editForm && getComputedStyle(editForm).display !== 'none' && !! root.querySelector('.com-foamdev-grammaticvisualizer-theme-TokenCatalogueView-pickable'), 'EDIT mode: form and pickable rows');
       vv.remove();
 
       // Chrome rule: every button and input is a u2 view.
