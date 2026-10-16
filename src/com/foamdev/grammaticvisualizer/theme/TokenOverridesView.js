@@ -84,6 +84,11 @@ foam.CLASS({
         }
       ],
       methods: [
+        function reset() {
+          var o = this.override;
+          this.copyFrom({ source: o.source, light: o.target, dark: ( o.variants && o.variants.dark ) || '', enabled: o.enabled });
+        },
+
         async function save() {
           var source = this.source.trim().replace(/^\$/, '');
           if ( ! this.dirty || ! source || ! ( this.light || this.dark ) ) return;   // nothing to store, or incomplete
@@ -115,6 +120,14 @@ foam.CLASS({
           toolTip: 'Remove this override',
           buttonStyle: 'TERTIARY',
           code: async function() { await this.dao.remove(this.override); this.owner.recolour(); }
+        },
+        {
+          name: 'discard',
+          label: '↺ Discard',
+          toolTip: 'Put this row back to its stored values',
+          buttonStyle: 'TERTIARY',
+          isEnabled: function(dirty) { return dirty; },
+          code: function() { this.reset(); }
         }
       ]
     }
@@ -127,7 +140,8 @@ foam.CLASS({
     { name: 'COL_SOURCE', message: 'Token' },
     { name: 'COL_LIGHT', message: 'Light' },
     { name: 'COL_DARK', message: 'Dark' },
-    { name: 'COL_ENABLED', message: 'Enabled' }
+    { name: 'COL_ENABLED', message: 'Enabled' },
+    { name: 'UNSAVED', message: 'Unsaved' }
   ],
 
   css: `
@@ -135,14 +149,15 @@ foam.CLASS({
     <<help { color: $textSecondary; }
     <<table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     <<table th:first-child { width: 40%; }
-    <<table th:last-child { width: 16rem; }
-    <<actions { display: flex; gap: $space-2; align-items: center; }
+    <<table th:last-child { width: 30rem; }
+    <<actions { display: flex; flex-wrap: nowrap; gap: $space-2; align-items: center; white-space: nowrap; }
     <<table th { text-align: left; padding: $space-1 $space-2; border-bottom: 1px solid $borderDefault; }
     <<table td { padding: $space-1 $space-2; border-bottom: 1px solid $borderLight; vertical-align: middle; }
     <<token { font-family: monospace; }
     <<table td input[type=text] { width: 100%; font-family: monospace; }
     <<table .foam-u2-view-ColorEditView input[type=text] { width: 8rem; }
     <<empty { color: $textTertiary; }
+    <<unsaved { color: $textSecondary; }
   `,
 
   properties: [
@@ -152,6 +167,11 @@ foam.CLASS({
       name: 'editable',
       documentation: 'Rows are inputs and have a remove action only while the theme is being edited.',
       value: true
+    },
+    {
+      class: 'Int',
+      name: 'dirtyCount',
+      documentation: 'Rows with unsaved changes; ThemeTokensView sums it into its status line.'
     },
     {
       class: 'Array',
@@ -179,6 +199,7 @@ foam.CLASS({
       this
         .add(this.slot(function(rows, editable) {
           self.editors = [];
+          self.onDirty();
           if ( ! rows.length ) return this.E().addClass('p', self.myClass('empty')).add(self.EMPTY);
           return this.E('table').addClass(self.myClass('table'))
             .start('thead').start('tr')
@@ -194,18 +215,25 @@ foam.CLASS({
                 source: o.source, light: o.target, dark: ( o.variants && o.variants.dark ) || '', enabled: o.enabled
               });
               self.editors.push(row);
+              this.onDetach(row.dirty$.sub(self.onDirty));
               // The row's ControllerMode picks each cell's read or edit view (ModeAltView).
               this.start('tr').addClass(self.myClass('row'))
                 .startContext({ data: row, controllerMode: editable ? self.ControllerMode.EDIT : self.ControllerMode.VIEW })
-                  .start('td').addClass(self.myClass('token')).add(row.SOURCE).end()
+                  .start('td').addClass(self.myClass('token')).add(row.SOURCE)
+                    .start('div').addClass('p-sm', self.myClass('unsaved')).show(row.dirty$).add('● ' + self.UNSAVED).end()
+                  .end()
                   .start('td').add(row.LIGHT).end()
                   .start('td').add(row.DARK).end()
                   .start('td').add(row.ENABLED).end()
-                  .start('td').show(editable).start().addClass(self.myClass('actions')).add(row.SAVE_OVERRIDE, row.REMOVE).end().end()
+                  .start('td').show(editable).start().addClass(self.myClass('actions')).add(row.SAVE_OVERRIDE, row.DISCARD, row.REMOVE).end().end()
                 .endContext()
               .end();
             }).end();
         }));
+    },
+
+    function discardAll() {
+      this.editors.forEach(function(r) { r.reset(); });
     },
 
     function saveAll() {
@@ -220,6 +248,10 @@ foam.CLASS({
   ],
 
   listeners: [
+    {
+      name: 'onDirty',
+      code: function() { this.dirtyCount = this.editors.filter(function(r) { return r.dirty; }).length; }
+    },
     {
       name: 'refresh',
       isMerged: true,

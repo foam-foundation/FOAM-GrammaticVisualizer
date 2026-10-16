@@ -107,6 +107,14 @@ foam.CLASS({
           isAvailable: function(overridden) { return overridden; },
           isEnabled: function(dirty) { return dirty; },
           code: function() { return this.catalogue.save(this); }
+        },
+        {
+          name: 'discard',
+          label: '↺ Discard',
+          toolTip: 'Put this row back to its stored values',
+          buttonStyle: 'TERTIARY',
+          isEnabled: function(dirty) { return dirty; },
+          code: function() { this.reset(); }
         }
       ]
     }
@@ -117,6 +125,7 @@ foam.CLASS({
     { name: 'HELP_RO', message: 'Press Edit to change a value.' },
     { name: 'ALL', message: 'All' },
     { name: 'OVERRIDDEN', message: 'Overridden' },
+    { name: 'UNSAVED', message: 'Unsaved' },
     { name: 'SEARCH_PLACEHOLDER', message: 'Search tokens' }
   ],
 
@@ -147,6 +156,8 @@ foam.CLASS({
     << .foam-comics-v2-DAOBrowserView { height: 60vh; min-height: 32rem; }
     << .foam-u2-view-ColorPicker { width: 4rem; height: 2.8rem; padding: $space-0_5; }
     << .foam-u2-view-ColorEditView input[type=text] { width: 8rem; font-family: monospace; }
+    <<actions { display: flex; flex-wrap: nowrap; gap: $space-2; align-items: center; white-space: nowrap; }
+    <<unsaved { color: $textSecondary; margin-left: $space-2; }
   `,
 
   properties: [
@@ -172,6 +183,11 @@ foam.CLASS({
       name: 'edits',
       documentation: 'Edit per token name, made on first render of its row and kept so unsaved input survives the table re-rendering rows.',
       factory: function() { return {}; }
+    },
+    {
+      class: 'Int',
+      name: 'dirtyCount',
+      documentation: 'Rows with unsaved changes; ThemeTokensView sums it into its status line.'
     },
     {
       name: 'resolved',
@@ -248,6 +264,10 @@ foam.CLASS({
       }
     },
     {
+      name: 'onDirty',
+      code: function() { this.dirtyCount = Object.values(this.edits).filter(function(e) { return e.dirty; }).length; }
+    },
+    {
       name: 'onModeChange',
       documentation: 'Leaving EDIT drops unsaved input; the table re-renders its rows so each cell picks its view for the new mode.',
       code: function() {
@@ -317,7 +337,12 @@ foam.CLASS({
         overridden: !! this.overriddenNames[name]
       });
       e.reset();
+      this.onDetach(e.dirty$.sub(this.onDirty));
       return e;
+    },
+
+    function discardAll() {
+      Object.values(this.edits).forEach(function(e) { e.reset(); });
     },
 
     function saveAll() {
