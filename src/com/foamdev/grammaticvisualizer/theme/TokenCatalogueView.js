@@ -112,8 +112,8 @@ foam.CLASS({
   ],
 
   messages: [
-    { name: 'HELP', message: 'Base tokens from foam.u2.CSSTokens, resolved for this theme. Change a value, then press Add override on that row.' },
-    { name: 'HELP_RO', message: 'Base tokens from foam.u2.CSSTokens, resolved for this theme. Press Edit to add overrides.' },
+    { name: 'HELP', message: 'Change a value, then press Add override.' },
+    { name: 'HELP_RO', message: 'Press Edit to change a value.' },
     { name: 'ALL', message: 'All' },
     { name: 'OVERRIDDEN', message: 'Overridden' },
     { name: 'SEARCH_PLACEHOLDER', message: 'Search tokens' }

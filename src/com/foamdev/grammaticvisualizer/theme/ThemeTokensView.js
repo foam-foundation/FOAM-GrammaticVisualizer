@@ -23,14 +23,12 @@ foam.CLASS({
   ],
 
   messages: [
-    { name: 'HELP', message: 'Views are styled with $tokens (foam.u2.CSSTokens plus each class\'s own). A theme recolours them with override rows; everything else keeps the base value.' },
     { name: 'OVERRIDES_TITLE', message: 'Overrides for this theme' },
     { name: 'CATALOGUE_TITLE', message: 'Base tokens' }
   ],
 
   css: `
     << { display: flex; flex-direction: column; gap: $space-3; }
-    <<help { color: $textSecondary; }
     <<sections { display: flex; flex-direction: column; gap: $space-2; }
     /* Each title starts a new block: clear space above it, not just the row gap. */
     <<sections > .h500:not(:first-child) { margin-top: $space-6; }
@@ -55,7 +53,6 @@ foam.CLASS({
       // foam.u2.View's controllerMode is a property; keep it on the context's, as SectionView does.
       if ( this.__subContext__.controllerMode$ ) this.controllerMode$.follow(this.__subContext__.controllerMode$);
       this.addClass(this.myClass())
-        .start().addClass('p', this.myClass('help')).add(this.HELP).end()
         .add(this.slot(function(data) {
           if ( ! data ) return;
           var overrides = self.TokenOverridesView.create({ themeId: data.id, editable$: self.editable$ }, self);

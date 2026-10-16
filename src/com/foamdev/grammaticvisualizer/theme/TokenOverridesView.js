@@ -114,9 +114,9 @@ foam.CLASS({
   ],
 
   messages: [
-    { name: 'HELP', message: 'Each row replaces one $token for this theme. Light is the value for every mode; Dark, when set, wins in dark mode. 261 base tokens live in foam.u2.CSSTokens (primary500, backgroundDefault, textDefault, ...).' },
+    { name: 'HELP', message: 'Dark replaces Light in dark mode. Leave Dark empty to use Light in both.' },
     { name: 'NO_DAO', message: 'cssTokenOverrideDAO is not available to this user.' },
-    { name: 'EMPTY', message: 'No overrides yet. This theme uses every token\'s default value.' },
+    { name: 'EMPTY', message: 'No overrides yet.' },
     { name: 'COL_SOURCE', message: 'Token' },
     { name: 'COL_LIGHT', message: 'Light' },
     { name: 'COL_DARK', message: 'Dark' },
