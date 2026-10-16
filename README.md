@@ -40,7 +40,7 @@ The tests are FOAM `JSTest` classes and run in a browser through FOAM's test bui
 
 ```sh
 (cd foam3 && ./build.sh --install)    # once: FOAM's npm packages
-./build.sh client-tests:RailThemeTest,ParserLabelsTest,RailTerminalTest,RailStripTest,RailBuilderTest,RailSceneTest,RailAltTest,RailRepeatTest,RailOptionalTest,RailSymRefTest,RailReachabilityTest,RailUntilTest,RailGateTest,RailBadgeTest,RailNotationTest,ParseTraceTest,RailTraceApplyTest,RailSvgTest,RailDomSceneTest,DocumentViewTest
+./build.sh client-tests:RailThemeTest,ParserLabelsTest,RailTerminalTest,RailStripTest,RailBuilderTest,RailSceneTest,RailAltTest,RailRepeatTest,RailOptionalTest,RailSymRefTest,RailReachabilityTest,RailUntilTest,RailGateTest,RailBadgeTest,RailNotationTest,ParseTraceTest,RailTraceApplyTest,RailSvgTest,RailDomSceneTest,DocumentViewTest,RailDiagramViewTest
 ```
 
 Known failure: `RailNotationTest` reports `missing: Span`. `foam.parse.Span` is new in FOAM and the viewer has no diagram for it yet, so it draws as a grey generic box. The test fails by design whenever FOAM gains a parser with no row in `NOTATION.md`.
@@ -50,7 +50,7 @@ Known failure: `RailNotationTest` reports `missing: Span`. `foam.parse.Span` is 
 | Path | What it is |
 | --- | --- |
 | `src/foam/parse/rail/` | the viewer: diagram elements, layout, parse trace, panels |
-| `src/foam/parse/rail/test/` | 20 test classes and their `tests.jrl` |
+| `src/foam/parse/rail/test/` | 21 test classes and their `tests.jrl` |
 | `demo/` | the demo page |
 | `foam3/` | FOAM, as a submodule |
 | `pom.js`, `build.sh`, `deployment/test/` | what FOAM's build needs to run the tests from this repository |

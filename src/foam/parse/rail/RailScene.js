@@ -55,6 +55,7 @@ foam.CLASS({
     ^tip[hidden] { display: none; }
     /* Element groups: hit targets take the pointer; composites and decorations let it through to the strip behind. */
     ^ [data-rail] { cursor: pointer; }
+    ^ [data-rail]:hover > .box.ruleref { stroke-width: 2.5; }
     ^ text { dominant-baseline: central; pointer-events: none; }
     ^ .emphasis-text { dominant-baseline: auto; }
     ^ path, ^ rect, ^ circle { pointer-events: visible; }
@@ -113,6 +114,7 @@ foam.CLASS({
     { name: 'world_' },
     { name: 'tip_' },
     { name: 'viewport_' },
+    { name: 'styleEl_' },
     { name: 'stripEls_', factory: function() { return new Map(); }, documentation: 'strip -> its <svg> u2 element.' },
     { name: 'overlays_', factory: function() { return []; }, documentation: '[{ el, x, y }] u2 elements placed in the world at scene coordinates; they pan and zoom with the strips.' },
     { name: 'dividerEl_' },
@@ -131,7 +133,8 @@ foam.CLASS({
     function render() {
       var self = this;
       this.addClass(this.myClass()).enableClass('values', this.showValues$).enableClass('lanes', this.showLanes$);
-      this.start('style').add(this.cssText()).end();
+      this.styleEl_ = this.start('style').add(this.cssText());
+      this.styleEl_.end();
       this.viewport_ = this.start('div').addClass(this.myClass('viewport'))
         .style({ background: this.theme.background })
         .on('pointerdown',  function(e) { self.onDown(e); })
@@ -149,6 +152,15 @@ foam.CLASS({
       this.viewport_.end();
       this.applyCamera();
       this.mountStrips();
+    },
+
+    function refreshTheme() {
+      /** After a light/dark switch: re-read the theme's colours into the stylesheet, viewport and tooltip. */
+      this.theme.refresh();
+      if ( ! this.styleEl_ ) return;
+      this.styleEl_.removeAllChildren().add(this.cssText());
+      this.viewport_.style({ background: this.theme.background });
+      this.tip_.style({ background: this.theme.resolve('tooltipBg'), color: this.theme.resolve('tooltipText') });
     },
 
     function cssText() {
