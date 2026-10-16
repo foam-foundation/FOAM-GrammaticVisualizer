@@ -1,0 +1,27 @@
+// A flow that uses the <grammar> markdown tag; open it from Flows.
+p({
+  "class":"foam.core.reflow.Flow",
+  "name":"Grammar tag",
+  "category":"GRAMMAR",
+  "description":"The <grammar> markdown tag: a grammar written in a document, shown as code or as its railroad diagram.",
+  "keywords":["grammar","railroad","parser"],
+  "script":"""[
+  {
+    "flowName": "intro",
+    "cmd": "markdown",
+    "value": {
+      "class": "foam.core.reflow.Markdown",
+      "markdown": "# The grammar tag\\n\\nA `foam.parse` grammar written where it is explained. Switch the tab to **Diagram** to see it as a railroad and parse the input.\\n\\n<grammar input=\\"[1, [ab, 22], x]\\">\\n{\\n  START:   alt(seq(sym('list'), eof()), seq(sym('keyword'), eof())),\\n  list:    seq(literal('['), optional(sym('ws')), repeat(sym('item'), seq(optional(sym('ws')), literal(','), optional(sym('ws')))), optional(sym('ws')), literal(']')),\\n  item:    alt(sym('number'), sym('word'), sym('list')),\\n  number:  plus(range('0', '9')),\\n  word:    plus(range('a', 'z')),\\n  ws:      plus(literal(' ')),\\n  keyword: alt(literal('do'), literal('double'))\\n}\\n</grammar>\\n\\nA long input can live in its own block and be named with `input-from`:\\n\\n<grammar input-from=\\"pairs\\">\\n{\\n  START: seq(sym('pair'), repeat(seq(literal(';'), sym('pair'))), eof()),\\n  pair:  seq(sym('key'), literal('='), sym('value')),\\n  key:   plus(range('a', 'z')),\\n  value: plus(notChars(';'))\\n}\\n</grammar>\\n"
+    }
+  },
+  {
+    "flowName": "pairs",
+    "cmd": "script",
+    "value": {
+      "class": "foam.core.reflow.Script",
+      "autoRun": true,
+      "code": "return 'name=alex;city=new york;tz=est';"
+    }
+  }
+]"""
+})

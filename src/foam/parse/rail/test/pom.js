@@ -27,6 +27,7 @@ foam.POM({
     { name: 'RailSvgTest',      flags: 'js&test|java&test' },
     { name: 'RailDomSceneTest', flags: 'js&test|java&test' },
     { name: 'DocumentViewTest', flags: 'js&test|java&test' },
-    { name: 'RailDiagramViewTest', flags: 'js&test|java&test' }
+    { name: 'RailDiagramViewTest', flags: 'js&test|java&test' },
+    { name: 'GrammarTagTest', flags: 'js&test|java&test' }
   ]
 });
