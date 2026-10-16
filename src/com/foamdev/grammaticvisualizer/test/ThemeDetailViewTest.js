@@ -109,8 +109,8 @@ foam.CLASS({
       await dao.put(this.CSSTokenOverride.create({ theme: 't1', source: 'textDefault', target: '#222222' }, y));
       await until(function() { return rows().length === 2; });
       x.test(rows().length === 2, 'a DAO put adds a row: ' + rows().length);
-      var removeBtn = ovBtn(rows()[1], /✕/);
-      x.test(!! removeBtn, 'each row has a remove action');
+      var removeBtn = rows()[1].querySelector('.foam-u2-ActionView-remove');
+      x.test(!! removeBtn && !! removeBtn.querySelector('svg, img'), 'each row has a remove action, drawn as the trash icon');
       removeBtn.click();
       await until(function() { return rows().length === 1; });
       x.test(rows().length === 1, 'the row action removes the override: ' + rows().length);
