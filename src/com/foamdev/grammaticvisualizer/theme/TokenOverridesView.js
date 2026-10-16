@@ -59,7 +59,7 @@ foam.CLASS({
           view: {
             class: 'foam.u2.view.ModeAltView',
             readView: { class: 'com.foamdev.grammaticvisualizer.theme.TokenCellView' },
-            writeView: { class: 'foam.u2.view.ColorPicker' }
+            writeView: { class: 'foam.u2.view.ColorEditView' }
           }
         },
         {
@@ -68,7 +68,7 @@ foam.CLASS({
           view: {
             class: 'foam.u2.view.ModeAltView',
             readView: { class: 'com.foamdev.grammaticvisualizer.theme.TokenCellView' },
-            writeView: { class: 'foam.u2.view.ColorPicker' }
+            writeView: { class: 'foam.u2.view.ColorEditView' }
           }
         },
         { class: 'Boolean', name: 'enabled' }
@@ -133,6 +133,7 @@ foam.CLASS({
     <<table td { padding: $space-1 $space-2; border-bottom: 1px solid $borderLight; vertical-align: middle; }
     <<token { font-family: monospace; }
     <<table td input[type=text] { width: 100%; font-family: monospace; }
+    <<table .foam-u2-view-ColorEditView input[type=text] { width: 8rem; }
     <<empty { color: $textTertiary; }
   `,
 

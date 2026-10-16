@@ -45,7 +45,7 @@ foam.CLASS({
       name: 'Edit',
       documentation: `
         One catalogue row's editor. light and dark pair a read view (TokenCellView)
-        with an input (a colour picker for #rrggbb values, else a text field)
+        with an input (hex field plus colour picker for #rrggbb values, else a text field)
         through ModeAltView, so the ControllerMode in the cell's context picks
         one. Nothing is stored until the row's action runs.
       `,
@@ -80,7 +80,8 @@ foam.CLASS({
           return {
             class: 'foam.u2.view.ModeAltView',
             readView: { class: 'com.foamdev.grammaticvisualizer.theme.TokenCellView' },
-            writeView: colour ? { class: 'foam.u2.view.ColorPicker' } : { class: 'foam.u2.TextField' }
+            // ColorEditView: a hex text field and a colour picker on the same value.
+            writeView: colour ? { class: 'foam.u2.view.ColorEditView' } : { class: 'foam.u2.TextField' }
           };
         },
         function reset() {
@@ -145,6 +146,7 @@ foam.CLASS({
        and lays out every row (14,000px for 250 tokens) and the whole page scrolls instead. */
     << .foam-comics-v2-DAOBrowserView { height: 60vh; min-height: 32rem; }
     << .foam-u2-view-ColorPicker { width: 4rem; height: 2.8rem; padding: $space-0_5; }
+    << .foam-u2-view-ColorEditView input[type=text] { width: 8rem; font-family: monospace; }
   `,
 
   properties: [

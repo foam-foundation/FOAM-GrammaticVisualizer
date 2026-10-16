@@ -77,11 +77,12 @@ foam.CLASS({
       x.test(root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenOverridesView').length === 1, 'one override table in the DOM');
       var rows = function() { return tov().querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row'); };
       // EDIT mode: the cells are inputs (ModeAltView write views) holding the row's values.
-      var cellInputs = function(r) { return Array.from(r.querySelectorAll('input')).map(function(i) { return i.type === 'checkbox' ? String(i.checked) : i.value; }); };
+      // Colour cells are ColorEditView (hex field + picker on one value): read the fields, not the pickers.
+      var cellInputs = function(r) { return Array.from(r.querySelectorAll('input:not([type=color])')).map(function(i) { return i.type === 'checkbox' ? String(i.checked) : i.value; }); };
       x.test(rows().length === 1 && cellInputs(rows()[0]).join(' ') === 'primary500 #123456 #abcdef true',
         'EDIT mode: each row is editable in place, inputs hold token, light, dark, enabled: ' + (rows()[0] && cellInputs(rows()[0]).join(' ')));
       // Edit a value in the row: committing the input writes the override back.
-      var lightIn = rows()[0].querySelectorAll('input')[1];
+      var lightIn = rows()[0].querySelectorAll('input:not([type=color])')[1];
       lightIn.value = '#654321'; lightIn.dispatchEvent(new Event('change'));
       var findRow = async function(src) { return ( await dao.select() ).array.find(function(o) { return o.theme === 't1' && o.source === src; }); };
       var stored = async function() { return ( await findRow('primary500') ) || {}; };
@@ -89,7 +90,7 @@ foam.CLASS({
       x.test(( await stored() ).target === '#654321' && ( await stored() ).variants.dark === '#abcdef', 'editing a row\'s light value saves it and keeps dark');
       await until(function() { return rows()[0] && cellInputs(rows()[0])[1] === '#654321'; });
       // Rename in place: source is part of the id, so the old row goes and a new one comes.
-      var srcIn = rows()[0].querySelectorAll('input')[0];
+      var srcIn = rows()[0].querySelectorAll('input:not([type=color])')[0];
       srcIn.value = 'primary400'; srcIn.dispatchEvent(new Event('change'));
       await until(async function() { return !! ( await findRow('primary400') ); });
       x.test(!! ( await findRow('primary400') ) && ! ( await findRow('primary500') ), 'renaming a row\'s token moves the override to the new name');
@@ -117,11 +118,11 @@ foam.CLASS({
       var tabs = Array.from(cat().querySelectorAll('.foam-u2-view-TabChoiceView label')).map(function(l) { return l.textContent.trim(); });
       x.test(tabs[0] === 'All' && tabs.indexOf('Brand') > 0 && tabs.indexOf('Palette ramps') > 0, 'one canned-query tab per group, All first: ' + tabs.join(', '));
       // EDIT mode: value cells are inputs holding the resolved values.
-      var catInputs = function(r) { return Array.from(r.querySelectorAll('input')).map(function(i) { return i.value; }); };
+      var catInputs = function(r) { return Array.from(r.querySelectorAll('input:not([type=color])')).map(function(i) { return i.value; }); };
       var p500 = rowNamed('primary500');
       x.test(!! p500, 'primary500 is listed');
       var vals = p500 && catInputs(p500);
-      x.test(vals && vals.length === 2 && /^#/.test(vals[0]) && /^#/.test(vals[1]) && p500.querySelectorAll('input[type=color]').length === 2, 'EDIT mode: a colour token\'s light and dark are colour pickers with its hex values: ' + vals);
+      x.test(vals && vals.length === 2 && /^#/.test(vals[0]) && /^#/.test(vals[1]) && p500.querySelectorAll('input[type=color]').length === 2, 'EDIT mode: a colour token\'s light and dark are a hex field plus a colour picker: ' + vals);
       var bgd = rowNamed('backgroundDefault');
       var bvals = bgd && catInputs(bgd);
       x.test(bvals && bvals[0] !== bvals[1], 'a token with a dark variant shows two different values: ' + bvals);
@@ -156,6 +157,7 @@ foam.CLASS({
       bbLight.value = '#112233'; bbLight.dispatchEvent(new Event('change'));
       await until(function() { return rowBtn(/Add override/) && ! rowBtn(/Add override/).disabled; });
       x.test(rowBtn(/Add override/) && ! rowBtn(/Add override/).disabled, 'changing a value enables Add override');
+      x.test(/^#112233$/i.test(catInputs(bb())[0]), 'the hex field next to the picker follows it: ' + catInputs(bb())[0]);
       rowBtn(/Add override/).click();
       await until(async function() { return !! ( await findRow('borderBrand') ); });
       var bbStored = await findRow('borderBrand');
