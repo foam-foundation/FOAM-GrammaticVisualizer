@@ -200,7 +200,7 @@ foam.CLASS({
       await until(function() { return rootV.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row').length > 0; });
       var shown = function(el) { return !! el && el.getClientRects().length > 0; };
       var rowV = Array.from(rootV.querySelectorAll('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row')).find(function(r) { return /primary400/.test(r.textContent); });
-      x.test(! rowV.querySelector('input[type=text], input[type=color]') && /\$primary400/.test(rowV.textContent) && /#654321/.test(rowV.textContent) && /#abcdef/.test(rowV.textContent),
+      x.test(! rowV.querySelector('input[type=text], input[type=color]') && /\$primary400/.test(rowV.textContent) && /#654321/i.test(rowV.textContent) && /#abcdef/i.test(rowV.textContent),
         'VIEW mode: cells are read views (token name, swatch and value), no inputs: ' + rowV.textContent);
       x.test(rowV.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-TokenCellView-swatch').length === 2, 'VIEW mode: light and dark show a swatch');
       x.test(! shown(rootV.querySelector('tr.com-foamdev-grammaticvisualizer-theme-TokenOverridesView-row .foam-u2-ActionView')), 'VIEW mode: no remove action on rows');

@@ -38,7 +38,8 @@ foam.CLASS({
           .callIf(/^(#|rgb|hsl|currentColor$)/i.test(data), function() {
             this.start('span').addClass(self.myClass('swatch')).style({ 'background-color': data }).end();
           })
-          .start('span').addClass(self.myClass('value')).add(data).end();
+          // Hex in one case: a colour input reports lower case, CSSTokens are written in upper.
+          .start('span').addClass(self.myClass('value')).add(/^#[0-9a-f]+$/i.test(data) ? data.toUpperCase() : data).end();
       }));
     }
   ]
