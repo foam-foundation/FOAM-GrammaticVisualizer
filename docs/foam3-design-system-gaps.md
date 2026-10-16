@@ -38,6 +38,7 @@ design system · 🟡 paper cut — cost time, not design.
 | 25 | A bare word in the table search box matches nothing | 🟠 | Fall back to keyword search when the query parser yields no predicate |
 | 26 | A table cell can't have an edit view: every cell is forced to VIEW | 🟠 | A per-column `tableCellView` / mode-aware cell, plus an inline-edit table mode |
 | 27 | A detail view can't join the record's Save | 🟠 | A `save` / `cancel` topic on the update view, or a `saveHooks` export |
+| 28 | No "unsaved changes" guard when leaving a screen | 🟠 | A stack-level `canLeave` check plus one standard Discard / Keep dialog |
 
 ---
 
@@ -228,3 +229,11 @@ design system · 🟡 paper cut — cost time, not design.
 **foam3** · `DAOUpdateView.save` does `config.dao.put(workingData)` then `stack.back()` (`DAOUpdateView.js:117-145`). Cancel is also `stack.back()`. The view publishes `finished` only when the record changed, does not export `config`, and has no hook for child views. A view inside it cannot tell Save from Cancel.
 **Did** · `ThemeTokensView` imports `themeDAO` and listens for a put of this theme on it. That put is what Save does, so staged rows are stored then; Cancel never puts, so they are dropped with the view. This depends on the menu's `daoKey` being `themeDAO`.
 **Fix** · `saved` and `cancelled` topics on `DAOUpdateView` (and `DAOCreateView`), exported to the detail view; or an exported `saveHooks` list the Save action awaits before `stack.back()`.
+**Closest existing hook** · comics v3 `DetailView` lets a *model* override `save` and `cancelEdit` with a `foam.comics.v3.ComicsAction` of the same name (`DetailView.js:295-318`, documented in `doc/guides/Comics.md`). That is per model, not per view, and this menu runs comics v2 (`DAOMenu2`), so it does not apply here.
+
+## 28. No "unsaved changes" guard when leaving a screen 🟠
+
+**Needed** · warn before Cancel, Back, or a menu click throws away staged edits ("You have unsaved changes: Discard / Keep editing").
+**foam3** · searched `foam/u2/stack`, `foam/core/u2/navigation`, `ApplicationController`, `foam/core/menu`, comics v2 and v3: nothing can veto navigation. `Stack.push` / `back` / `jump` have no check, and no `beforeunload` handler exists outside debug tools. What does exist: `foam.u2.dialog.ConfirmationModal` (a reusable dialog), `Action.confirmationRequired` (confirm before one action runs, `doc/guides/Actions.md`), wizard `discard`, and hand-built "Unsaved Changes Detected" dialogs inside the Reflow `Console` only (`Console.js:2025`).
+**Did** · nothing yet; the Theme screen shows staged rows instead (status line planned).
+**Fix** · a `canLeave()` (or `dirty` slot) that `Stack` asks the top view before `back` / `push` / `jump`, a `beforeunload` hook for tab close, and one standard Discard / Keep editing dialog built on `ConfirmationModal`. Document it next to `confirmationRequired`.
