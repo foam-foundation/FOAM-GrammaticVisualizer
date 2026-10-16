@@ -116,7 +116,9 @@ foam.CLASS({
         },
         {
           name: 'remove',
-          label: '✕',
+          // Icon only, as foam's own row deletes (TitledArrayView, DAOSummaryView): the theme's trash glyph.
+          label: '',
+          themeIcon: 'trash',
           toolTip: 'Remove this override',
           buttonStyle: 'TERTIARY',
           code: async function() { await this.dao.remove(this.override); this.owner.recolour(); }
