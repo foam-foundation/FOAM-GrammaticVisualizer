@@ -42,7 +42,9 @@ foam.CLASS({
       var dao  = this.MDAO.create({ of: this.CSSTokenOverride }, x);
       // DAOBrowserView (the catalogue) imports auth and ctrl; the test page has no app behind it.
       var stubs = { auth: { check: async function() { return true; } }, ctrl: { notify: function() {}, pub: function() {}, sub: function() {}, add: function() { return this; } } };
-      var y    = x.createSubContext(Object.assign({ controllerMode: this.ControllerMode.EDIT, cssTokenOverrideDAO: dao }, stubs));
+      // themeDAO: the page's Save puts the theme there; ThemeTokensView stores staged row changes on that put.
+      var themeDAO = this.MDAO.create({ of: this.Theme }, x);
+      var y    = x.createSubContext(Object.assign({ controllerMode: this.ControllerMode.EDIT, cssTokenOverrideDAO: dao, themeDAO: themeDAO }, stubs));
       var svg  = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900"><rect width="1200" height="900" fill="#0a4ac6"/></svg>');
       var theme = this.Theme.create({ id: 't1', name: 't1', primary1: '#ff0000', logo: svg, inputHeight: '40px' }, y);
       await dao.put(this.CSSTokenOverride.create({ theme: 't1', source: 'primary500', target: '#123456', variants: { dark: '#abcdef' } }, y));
@@ -81,17 +83,25 @@ foam.CLASS({
       var cellInputs = function(r) { return Array.from(r.querySelectorAll('input:not([type=color])')).map(function(i) { return i.type === 'checkbox' ? String(i.checked) : i.value; }); };
       x.test(rows().length === 1 && cellInputs(rows()[0]).join(' ') === 'primary500 #123456 #abcdef true',
         'EDIT mode: each row is editable in place, inputs hold token, light, dark, enabled: ' + (rows()[0] && cellInputs(rows()[0]).join(' ')));
-      // Edit a value in the row: committing the input writes the override back.
+      // Edit a value in the row: staged until the row's Save override.
+      var ovBtn = function(r, re) { return Array.from(r.querySelectorAll('.foam-u2-ActionView')).find(function(b) { return re.test(b.textContent); }); };
+      x.test(ovBtn(rows()[0], /Save override/) && ovBtn(rows()[0], /Save override/).disabled, 'an override row has Save override, disabled until a change');
       var lightIn = rows()[0].querySelectorAll('input:not([type=color])')[1];
       lightIn.value = '#654321'; lightIn.dispatchEvent(new Event('change'));
       var findRow = async function(src) { return ( await dao.select() ).array.find(function(o) { return o.theme === 't1' && o.source === src; }); };
       var stored = async function() { return ( await findRow('primary500') ) || {}; };
+      await wait(300);
+      x.test(( await stored() ).target === '#123456', 'a change is staged, not stored, until Save override');
+      await until(function() { return ! ovBtn(rows()[0], /Save override/).disabled; });
+      ovBtn(rows()[0], /Save override/).click();
       await until(async function() { return ( await stored() ).target === '#654321'; });
-      x.test(( await stored() ).target === '#654321' && ( await stored() ).variants.dark === '#abcdef', 'editing a row\'s light value saves it and keeps dark');
+      x.test(( await stored() ).target === '#654321' && ( await stored() ).variants.dark === '#abcdef', 'Save override stores the row\'s light value and keeps dark');
       await until(function() { return rows()[0] && cellInputs(rows()[0])[1] === '#654321'; });
       // Rename in place: source is part of the id, so the old row goes and a new one comes.
       var srcIn = rows()[0].querySelectorAll('input:not([type=color])')[0];
       srcIn.value = 'primary400'; srcIn.dispatchEvent(new Event('change'));
+      await until(function() { return ! ovBtn(rows()[0], /Save override/).disabled; });
+      ovBtn(rows()[0], /Save override/).click();
       await until(async function() { return !! ( await findRow('primary400') ); });
       x.test(!! ( await findRow('primary400') ) && ! ( await findRow('primary500') ), 'renaming a row\'s token moves the override to the new name');
       await until(function() { return rows().length === 1 && cellInputs(rows()[0])[0] === 'primary400'; });
@@ -99,7 +109,7 @@ foam.CLASS({
       await dao.put(this.CSSTokenOverride.create({ theme: 't1', source: 'textDefault', target: '#222222' }, y));
       await until(function() { return rows().length === 2; });
       x.test(rows().length === 2, 'a DAO put adds a row: ' + rows().length);
-      var removeBtn = rows()[1].querySelector('.foam-u2-ActionView');
+      var removeBtn = ovBtn(rows()[1], /✕/);
       x.test(!! removeBtn, 'each row has a remove action');
       removeBtn.click();
       await until(function() { return rows().length === 1; });
@@ -164,6 +174,14 @@ foam.CLASS({
       x.test(bbStored && bbStored.target === '#112233', 'Add override stores the row\'s values: ' + (bbStored && bbStored.target));
       await until(function() { return !! rowBtn(/Save override/); });
       x.test(!! rowBtn(/Save override/) && ! rowBtn(/Add override/) && rowBtn(/Save override/).disabled, 'an overridden row offers Save override, disabled until changed again');
+      // The page's Save (a put of this theme on themeDAO) stores staged row changes too.
+      bbLight = bb().querySelector('input[type=color]');
+      bbLight.value = '#445566'; bbLight.dispatchEvent(new Event('change'));
+      await until(function() { return rowBtn(/Save override/) && ! rowBtn(/Save override/).disabled; });
+      await themeDAO.put(theme);
+      await until(async function() { var o = await findRow('borderBrand'); return o && o.target === '#445566'; });
+      var bbPaged = await findRow('borderBrand');
+      x.test(bbPaged && bbPaged.target === '#445566', 'the page\'s Save stores a staged catalogue change: ' + (bbPaged && bbPaged.target));
 
       // Icons / Images: the 1200x900 logo stays inside its preview box, on a light and a dark surface.
       await select('Icons / Images', function() { return root.querySelectorAll('.com-foamdev-grammaticvisualizer-theme-ThemeImagesView-box img, .com-foamdev-grammaticvisualizer-theme-ThemeImagesView-box svg').length > 0; });

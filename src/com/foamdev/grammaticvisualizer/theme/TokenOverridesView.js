@@ -12,8 +12,8 @@ foam.CLASS({
   documentation: `
     The CSSTokenOverride rows of one theme, as a table with a swatch per value.
     New overrides are added from the token catalogue below. In EDIT mode each row's cells
-    are inputs (ModeAltView swaps TokenCellView for an editor) and an edit is
-    saved to the DAO when it commits. A row's target is the value for
+    are inputs (ModeAltView swaps TokenCellView for an editor); a change is staged
+    until the row's Save override action or the page's Save (saveAll) stores it. A row's target is the value for
     every colour mode; variants.dark wins in dark mode. foam3 keeps these rows
     in cssTokenOverrideDAO and CSSTokenOverrideService reads them live, so a
     put here recolours the running app.
@@ -35,8 +35,8 @@ foam.CLASS({
       documentation: `
         One override as editable properties. Each value property pairs a read view
         (TokenCellView) with an edit view through ModeAltView, so the ControllerMode
-        in the row's context decides which one shows. An edit is written back to
-        the DAO when the input commits (on change, not per key).
+        in the row's context decides which one shows. Nothing is written until
+        save() runs (the row's action, or the page's Save through saveAll).
       `,
       requires: [ 'foam.core.theme.customisation.CSSTokenOverride' ],
       properties: [
@@ -71,43 +71,50 @@ foam.CLASS({
             writeView: { class: 'foam.u2.view.ColorEditView' }
           }
         },
-        { class: 'Boolean', name: 'enabled' }
+        { class: 'Boolean', name: 'enabled' },
+        {
+          class: 'Boolean',
+          name: 'dirty',
+          documentation: 'The row differs from the stored override. Case-blind for hex: a colour input reports lower case.',
+          expression: function(override, source, light, dark, enabled) {
+            var lc = function(v) { return ( v || '' ).toLowerCase(); };
+            return source !== override.source || lc(light) !== lc(override.target) ||
+              lc(dark) !== lc(override.variants && override.variants.dark) || enabled !== override.enabled;
+          }
+        }
       ],
       methods: [
-        function init() {
-          this.SUPER();
-          ['source', 'light', 'dark', 'enabled'].forEach(function(n) { this.onDetach(this[n + '$'].sub(this.save)); }, this);
+        async function save() {
+          var source = this.source.trim().replace(/^\$/, '');
+          if ( ! this.dirty || ! source || ! ( this.light || this.dark ) ) return;   // nothing to store, or incomplete
+          var o = this.CSSTokenOverride.create({
+            theme: this.override.theme,
+            source: source,
+            target: this.light,
+            variants: this.dark ? { dark: this.dark } : {},
+            enabled: this.enabled
+          });
+          // source is part of the id: a rename is a new row, so drop the old one.
+          if ( source !== this.override.source ) await this.dao.remove(this.override);
+          this.override = await this.dao.put(o);
+          this.owner.recolour();
         }
       ],
       actions: [
+        {
+          name: 'saveOverride',
+          label: '✓ Save override',
+          toolTip: 'Store this row\'s changes',
+          buttonStyle: 'SECONDARY',
+          isEnabled: function(dirty) { return dirty; },
+          code: function() { return this.save(); }
+        },
         {
           name: 'remove',
           label: '✕',
           toolTip: 'Remove this override',
           buttonStyle: 'TERTIARY',
           code: async function() { await this.dao.remove(this.override); this.owner.recolour(); }
-        }
-      ],
-      listeners: [
-        {
-          name: 'save',
-          isMerged: true,
-          mergeDelay: 100,
-          code: async function() {
-            var source = this.source.trim().replace(/^\$/, '');
-            if ( ! source || ! ( this.light || this.dark ) ) return;   // incomplete edit: leave the stored row alone
-            var o = this.CSSTokenOverride.create({
-              theme: this.override.theme,
-              source: source,
-              target: this.light,
-              variants: this.dark ? { dark: this.dark } : {},
-              enabled: this.enabled
-            });
-            // source is part of the id: a rename is a new row, so drop the old one.
-            if ( source !== this.override.source ) await this.dao.remove(this.override);
-            this.override = await this.dao.put(o);
-            this.owner.recolour();
-          }
         }
       ]
     }
@@ -128,7 +135,8 @@ foam.CLASS({
     <<help { color: $textSecondary; }
     <<table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     <<table th:first-child { width: 40%; }
-    <<table th:last-child { width: 4rem; }
+    <<table th:last-child { width: 16rem; }
+    <<actions { display: flex; gap: $space-2; align-items: center; }
     <<table th { text-align: left; padding: $space-1 $space-2; border-bottom: 1px solid $borderDefault; }
     <<table td { padding: $space-1 $space-2; border-bottom: 1px solid $borderLight; vertical-align: middle; }
     <<token { font-family: monospace; }
@@ -144,6 +152,11 @@ foam.CLASS({
       name: 'editable',
       documentation: 'Rows are inputs and have a remove action only while the theme is being edited.',
       value: true
+    },
+    {
+      class: 'Array',
+      name: 'editors',
+      documentation: 'The Row objects on screen, for saveAll.'
     },
     {
       class: 'Array',
@@ -165,6 +178,7 @@ foam.CLASS({
       this.refresh();
       this
         .add(this.slot(function(rows, editable) {
+          self.editors = [];
           if ( ! rows.length ) return this.E().addClass('p', self.myClass('empty')).add(self.EMPTY);
           return this.E('table').addClass(self.myClass('table'))
             .start('thead').start('tr')
@@ -179,6 +193,7 @@ foam.CLASS({
                 override: o, dao: self.cssTokenOverrideDAO, owner: self,
                 source: o.source, light: o.target, dark: ( o.variants && o.variants.dark ) || '', enabled: o.enabled
               });
+              self.editors.push(row);
               // The row's ControllerMode picks each cell's read or edit view (ModeAltView).
               this.start('tr').addClass(self.myClass('row'))
                 .startContext({ data: row, controllerMode: editable ? self.ControllerMode.EDIT : self.ControllerMode.VIEW })
@@ -186,11 +201,16 @@ foam.CLASS({
                   .start('td').add(row.LIGHT).end()
                   .start('td').add(row.DARK).end()
                   .start('td').add(row.ENABLED).end()
-                  .start('td').show(editable).add(row.REMOVE).end()
+                  .start('td').show(editable).start().addClass(self.myClass('actions')).add(row.SAVE_OVERRIDE, row.REMOVE).end().end()
                 .endContext()
               .end();
             }).end();
         }));
+    },
+
+    function saveAll() {
+      /** Store every changed row; the page's Save calls this through ThemeTokensView. */
+      return Promise.all(this.editors.map(function(r) { return r.save(); }));
     },
 
     function recolour() {

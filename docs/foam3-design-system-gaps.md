@@ -37,6 +37,7 @@ design system · 🟡 paper cut — cost time, not design.
 | 24 | `DAOBrowserView` picks canned query index 1 by default | 🟡 | Default to 0 |
 | 25 | A bare word in the table search box matches nothing | 🟠 | Fall back to keyword search when the query parser yields no predicate |
 | 26 | A table cell can't have an edit view: every cell is forced to VIEW | 🟠 | A per-column `tableCellView` / mode-aware cell, plus an inline-edit table mode |
+| 27 | A detail view can't join the record's Save | 🟠 | A `save` / `cancel` topic on the update view, or a `saveHooks` export |
 
 ---
 
@@ -220,3 +221,10 @@ design system · 🟡 paper cut — cost time, not design.
 **foam3** · `UnstyledTableRow` renders each cell inside `startContext({ controllerMode: 'VIEW' })` and only through `prop.tableCellFormatter.format(...)` (`UnstyledTableRow.js:188-220`). The formatter gets a projection of the visible columns, not the row object, and there is no per-column view or edit view. Row actions are a context menu, not a column. Clicks on an input inside a cell also reach the row's `click`, which opens the record by default.
 **Did** · `TokenEditFormatter` looks the catalogue up in the context, gets an editor object per row, and opens its own context with that editor as `data` and the screen's mode, so `ModeAltView` can pick the read or the edit view. The catalogue sets a no-op `click`, and re-renders the rows (`on.reset`) when the mode changes.
 **Fix** · a mode-aware cell: let a property's `view` (with `ModeAltView`) render in the table under the table's own `controllerMode`, and support action columns. An "inline edit" table mode would cover the rest.
+
+## 27. A detail view can't join the record's Save 🟠
+
+**Needed** · the Theme screen's override rows are other records (`CSSTokenOverride`). A change staged in a row should be stored when the page's Save is pressed, and dropped on Cancel.
+**foam3** · `DAOUpdateView.save` does `config.dao.put(workingData)` then `stack.back()` (`DAOUpdateView.js:117-145`). Cancel is also `stack.back()`. The view publishes `finished` only when the record changed, does not export `config`, and has no hook for child views. A view inside it cannot tell Save from Cancel.
+**Did** · `ThemeTokensView` imports `themeDAO` and listens for a put of this theme on it. That put is what Save does, so staged rows are stored then; Cancel never puts, so they are dropped with the view. This depends on the menu's `daoKey` being `themeDAO`.
+**Fix** · `saved` and `cancelled` topics on `DAOUpdateView` (and `DAOCreateView`), exported to the detail view; or an exported `saveHooks` list the Save action awaits before `stack.back()`.

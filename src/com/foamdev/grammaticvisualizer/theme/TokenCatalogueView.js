@@ -320,6 +320,12 @@ foam.CLASS({
       return e;
     },
 
+    function saveAll() {
+      /** Store every changed row; the page's Save calls this through ThemeTokensView. */
+      var self = this;
+      return Promise.all(Object.values(this.edits).filter(function(e) { return e.dirty; }).map(function(e) { return self.save(e); }));
+    },
+
     async function save(e) {
       // Dark is stored only when it differs from what light alone would give, so a token
       // with no dark value of its own keeps following light.
