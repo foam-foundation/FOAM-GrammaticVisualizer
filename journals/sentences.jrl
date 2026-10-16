@@ -1,0 +1,4 @@
+// seed data so there is something to query
+p({"class":"com.foamdev.grammaticvisualizer.Sentence","id":1,"name":"The cat sat on the mat.","description":"Simple sentence"})
+p({"class":"com.foamdev.grammaticvisualizer.Sentence","id":2,"name":"Although it rained, we went outside.","description":"Complex sentence"})
+p({"class":"com.foamdev.grammaticvisualizer.Sentence","id":3,"name":"She sings and he dances.","description":"Compound sentence"})

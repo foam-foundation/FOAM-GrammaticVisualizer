@@ -1,0 +1,31 @@
+p({
+  "class":"foam.core.auth.User",
+  "id":42,
+  "spid":"grammaticVisualizer",
+  "lifecycleState":1,
+  "group":"system",
+  "firstName":"admin",
+  "middleName":"",
+  "lastName":"admin",
+  "email":"admin@grammaticvisualizer.foamdev.com",
+  "userName":"admin",
+  "birthday":"1982-07-07T23:12:00.0Z",
+  "password":"bnp/mi6wMpU=:33ChYf68JHuQJwXxXvXBW7xxR8sy69zHQsZqqqeOMAs3w5mwKHdImbWrEnN0rWC6gpWCMPrMe8BLX5GkEeskMw==",
+  "emailVerified":true,
+  "loginEnabled":true
+})
+p({
+  "class":"foam.core.auth.User",
+  "id":43,
+  "spid":"grammaticVisualizer",
+  "lifecycleState":1,
+  "group":"anonymous",
+  "firstName":"Anonymous",
+  "lastName":"GrammaticVisualizer",
+  "email":"anonymous-grammaticVisualizer@grammaticvisualizer.foamdev.com",
+  "userName":"anonymous-grammaticVisualizer",
+  "emailVerified":true,
+  "loginEnabled":false,
+  "compliance":2,
+  "isPublic":false
+})
