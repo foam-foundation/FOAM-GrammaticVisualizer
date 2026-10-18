@@ -23,8 +23,16 @@ foam.CLASS({
       var m;
       try { m = JSON.parse(text); }
       catch (e) { return { machine: null, error: e.message }; }
-      if ( ! m || typeof m !== 'object' || Array.isArray(m) || ! m.states || typeof m.states !== 'object' || Array.isArray(m.states) ) {
-        return { machine: null, error: '"states" must be an object' };
+      var isObj = function(v) { return !! v && typeof v === 'object' && ! Array.isArray(v); };
+      if ( ! isObj(m) || ! isObj(m.states) ) return { machine: null, error: '"states" must be an object' };
+      for ( var n of Object.keys(m.states) ) {
+        var st = m.states[n];
+        if ( ! isObj(st) ) return { machine: null, error: 'State "' + n + '" must be an object' };
+        if ( st.on === undefined ) continue;
+        if ( ! isObj(st.on) ) return { machine: null, error: '"on" of state "' + n + '" must be an object' };
+        for ( var e of Object.keys(st.on) ) {
+          if ( typeof st.on[e] !== 'string' ) return { machine: null, error: n + ' on ' + e + ': the target must be a state name' };
+        }
       }
       return { machine: m, error: '' };
     },
@@ -66,6 +74,47 @@ foam.CLASS({
       return !! s && s.type === 'final';
     },
 
+    function unknownKeys(machine) {
+      /** Keys outside the subset the studio draws: kept and written back, but not shown. */
+      var top = [ 'id', 'initial', 'states', 'description' ], per = [ 'on', 'type', 'description' ], out = [];
+      Object.keys(machine).forEach(function(k) { if ( top.indexOf(k) < 0 ) out.push(k); });
+      Object.keys(machine.states || {}).forEach(function(n) {
+        Object.keys(machine.states[n] || {}).forEach(function(k) { if ( per.indexOf(k) < 0 ) out.push(n + '.' + k); });
+      });
+      return out;
+    },
+
+    function reservedValueNames_() {
+      /** Constant names a foam.FSM class already has (one per property, plus VALUES): a value may not reuse them. */
+      var cls = foam.lookup('com.foamdev.grammaticvisualizer.fsm.MachineCodec');
+      if ( ! cls.reserved_ ) {
+        var r = { VALUES: true };
+        // Properties only, converted by hand: foam.String.constantize memoizes into a plain object,
+        // so constantize('hasOwnProperty') (a method axiom) would break every later call.
+        foam.lang.StateMachineEnum.getAxiomsByClass(foam.lang.Property).forEach(function(a) {
+          r[a.name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()] = true;
+        });
+        cls.reserved_ = r;
+      }
+      return cls.reserved_;
+    },
+
+    function valueNames(machine) {
+      /**
+       * State name -> foam.FSM value name: the UPPER_SNAKE of the name, made unique and
+       * kept clear of the enum's own constants (VIEW, NAME, LABEL, ON, VALUES ...).
+       */
+      var self = this, reserved = this.reservedValueNames_(), taken = {}, out = {};
+      this.stateNames(machine).forEach(function(n, i) {
+        var base = self.upperSnake(n), v = base;
+        if ( reserved[v] ) v = 'S_' + base;
+        for ( var k = 2 ; taken[v] || reserved[v] ; k++ ) v = base + '_' + k;
+        taken[v] = true;
+        out[n] = v;
+      });
+      return out;
+    },
+
     function upperSnake(name) {
       /** A foam.FSM value name: camelCase split, every other run of non-alphanumerics an underscore. */
       var s = String(name)
@@ -97,10 +146,10 @@ foam.CLASS({
         }
       });
 
-      // Two names clash when they differ only by case, or give the same foam.FSM value name.
+      // Two names that differ only by case are almost always a typo. (Value names are made unique by valueNames.)
       for ( var i = 0 ; i < names.length ; i++ ) {
         for ( var j = i + 1 ; j < names.length ; j++ ) {
-          if ( names[i].toLowerCase() === names[j].toLowerCase() || this.upperSnake(names[i]) === this.upperSnake(names[j]) ) {
+          if ( names[i].toLowerCase() === names[j].toLowerCase() ) {
             add('case-clash', 'States "' + names[i] + '" and "' + names[j] + '" differ only by case.', true, { state: names[j] });
           }
         }
@@ -146,14 +195,14 @@ foam.CLASS({
        * state name and its label the state name itself, so fromFoamFSM restores it.
        * Needs the app's events refinement (FSMEvents.js) for on.
        */
-      var self = this, names = this.stateNames(machine);
-      var vname = function(n) { return names.indexOf(n) >= 0 ? self.upperSnake(n) : n; };
+      var self = this, names = this.stateNames(machine), vnames = this.valueNames(machine);
+      var vname = function(n) { return vnames[n] || n; };
       return {
         package: pkg,
         name: name,
         documentation: machine.description || '',
         values: names.map(function(n) {
-          var v = { name: self.upperSnake(n), label: n }, on = self.on_(machine, n), targets = [], evs = {};
+          var v = { name: vnames[n], label: n }, on = self.on_(machine, n), targets = [], evs = {};
           if ( machine.initial === n ) v.isInitial = true;
           Object.keys(on).forEach(function(e) {
             var t = vname(on[e]);

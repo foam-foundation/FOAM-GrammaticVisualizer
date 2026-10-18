@@ -71,6 +71,11 @@ foam.CLASS({
 
       r.start();
       x.test(r.current === 'loading data' && r.history.length === 0, 'start() resets to the initial state');
+
+      r.machine = { initial: 'view', states: { view: { on: { EDIT: 'name' } }, name: { on: { GO: 'é' } }, 'é': { on: { GO: 'ü' } }, 'ü': { type: 'final' } } };
+      x.test(r.error === '' && r.current === 'view', 'a machine with field-like names starts: ' + r.error);
+      for ( var ev of [ 'EDIT', 'GO', 'GO' ] ) await r.send(ev);
+      x.test(r.current === 'ü' && r.history.length === 3, 'and steps view -> name -> é -> ü (got ' + r.current + ', ' + r.error + ')');
     }
   ]
 });

@@ -121,6 +121,39 @@ foam.CLASS({
       x.test(stored && stored.name === 'Save button 2' && stored.definition === v.definitionText, 'saveMachine stores the name and JSON');
       x.test(stored && JSON.parse(stored.layout || '{}').dirty, 'saveMachine stores the canvas positions');
 
+      // A state named like an enum field (view) works end to end, and the JSON follows.
+      v.selection = { kind: 'state', state: 'dirty' };
+      await until(function() { return v.stateName === 'dirty'; });
+      v.stateName = 'view';
+      x.test(await until(function() { return v.definitionText.indexOf('"view"') >= 0 && !! root.querySelector('g.state[data-state="view"]'); }), 'renaming a state to "view" updates the JSON and the canvas');
+      x.test(v.runner.error === '' || v.runner.error === 'No initial state.', 'the runner accepts a state named view: ' + v.runner.error);
+
+      // Keys the studio does not draw are named under the JSON.
+      var withMeta = JSON.parse(v.definitionText); withMeta.meta = { k: 1 };
+      v.definitionText = JSON.stringify(withMeta, null, 2);
+      x.test(await until(function() { return text().indexOf('meta') >= 0 && /not drawn/.test(text()); }), 'unknown keys get a "not drawn" note');
+
+      // Unsaved changes are not thrown away by picking another machine.
+      await dao.put(this.Machine.create({ id: 2, name: 'Login form', definition: JSON.stringify({ initial: 'start', states: { start: { on: { SUBMIT: 'done' } }, done: { type: 'final' } } }), layout: '' }, x));
+      x.test(v.dirty === true, 'after edits the screen is dirty');
+      v.machineId = 2;
+      await wait(300);
+      x.test(v.machineId === 1 && v.opError === v.UNSAVED_BLOCK, 'picking another machine with unsaved changes is refused: ' + v.opError);
+      x.test(v.NEW_MACHINE.confirmationRequired && v.OPEN_FOAM_FSM.confirmationRequired && v.DELETE_MACHINE.confirmationRequired, 'New, Open and Delete ask for confirmation');
+      v.discardChanges();
+      x.test(await until(function() { return v.dirty === false; }), 'Discard changes reloads the saved machine and clears dirty');
+      v.machineId = 2;
+      x.test(await until(function() { return v.name === 'Login form' && !! root.querySelector('g.state[data-state="start"]'); }), 'with nothing unsaved, picking another machine loads it');
+
+      // A slow load must not land after a later pick.
+      var realFind = dao.find.bind(dao);
+      dao.find = function(id) { var p = realFind(id); return id === 1 ? p.then(function(o) { return wait(400).then(function() { return o; }); }) : p; };
+      v.machineId = 1;
+      v.machineId = 2;
+      await wait(700);
+      x.test(v.machineId === 2 && v.name === 'Login form', 'a slow earlier load does not overwrite a later pick (name ' + v.name + ')');
+      dao.find = realFind;
+
       // Open a foam.FSM class from the Import tab.
       v.foamClassId = 'no.such.Machine';
       v.openFoamFSM();

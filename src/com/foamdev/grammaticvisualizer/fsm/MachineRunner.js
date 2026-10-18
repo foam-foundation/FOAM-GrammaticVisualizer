@@ -87,14 +87,20 @@ foam.CLASS({
       // Class ids are never reused: the registry keeps every class it has seen.
       var cls = this.cls_, n = cls.runCount_ = ( cls.runCount_ || 0 ) + 1;
       var fsmId = this.RUN_PACKAGE + '.Machine' + n;
-      foam.FSM(this.codec.toFoamFSMSpec(m, this.RUN_PACKAGE, 'Machine' + n));
-      foam.CLASS({
-        package: this.RUN_PACKAGE,
-        name: 'Holder' + n,
-        properties: [ { class: 'StateMachine', of: fsmId, name: 'status' } ]
-      });
-      var F = foam.lookup(fsmId), H = foam.lookup(this.RUN_PACKAGE + '.Holder' + n);
-      this.holder_ = H.create({ status: F[this.codec.upperSnake(m.initial)] }, this);
+      try {
+        foam.FSM(this.codec.toFoamFSMSpec(m, this.RUN_PACKAGE, 'Machine' + n));
+        foam.CLASS({
+          package: this.RUN_PACKAGE,
+          name: 'Holder' + n,
+          properties: [ { class: 'StateMachine', of: fsmId, name: 'status' } ]
+        });
+        var F = foam.lookup(fsmId), H = foam.lookup(this.RUN_PACKAGE + '.Holder' + n);
+        this.holder_ = H.create({ status: F[this.codec.valueNames(m)[m.initial]] }, this);
+      } catch (e) {
+        // Never leave the screen half-updated: show why it cannot run instead.
+        this.holder_ = null; this.current = ''; this.error = e.message;
+        return;
+      }
       this.current = m.initial;
       this.error   = '';
     },

@@ -28,6 +28,7 @@ wrong result) · 📖 discoverability (the answer existed, nothing pointed to it
 | 15 | A `class: 'Array'` property ignores its `expression`: the type's default factory wins | 🕳️ | Skip the default factory when an expression is set, or warn |
 | 16 | `prop$: slot` at create time is a two-way link and can overwrite an expression property | 🕳️ | Document it next to `follow` |
 | 17 | JS-only tests can run in node in seconds, but nothing offers it | 💸 | Ship a node runner for `JSTest` classes that need no DOM |
+| 18 | `foam.String.constantize('hasOwnProperty')` breaks every later `constantize` call on the page | 🕳️ | `Object.prototype.hasOwnProperty.call(cache, key)` in `memoize1` |
 
 ## 1. `tools/` has no index 📖
 
@@ -162,4 +163,8 @@ The studio passed `problems$: this.checks$` to the canvas. That links both ways,
 ## 17. JS-only tests can run in node in seconds 💸
 
 Every client test run is a full build plus headless Chrome (about 3 minutes). For classes with no DOM (codec, edit ops, runner, the events refinement) a 20-line node script that loads `foam_node.js` and the app pom, then calls `runTest(x)` with a collecting `x.test`, runs them in about 2 seconds. That made red / green cheap for four of the five test classes; only the views needed the browser. foam3 should ship one (see entry 5).
+
+## 18. `constantize('hasOwnProperty')` breaks `constantize` for the whole page 🕳️
+
+To keep state value names clear of a `foam.FSM` class's own constants, the codec turned every `StateMachineEnum` axiom name into its constant name with `foam.String.constantize`. One axiom is the method `hasOwnProperty`. `memoize1` (`src/foam/lang/stdlib.js:201-214`) caches into a plain object and checks `cache.hasOwnProperty(mKey)`, so storing the key `hasOwnProperty` replaces that method with a string, and every later `constantize` call throws `cache.hasOwnProperty is not a function`, in any class. Reproduced in node: `constantize('hasOwnProperty')` then `constantize('fooBar')`. The studio now reads property axioms only and converts names by hand. Fix in foam3: `Object.prototype.hasOwnProperty.call(cache, mKey)` (or a `Map`).
 

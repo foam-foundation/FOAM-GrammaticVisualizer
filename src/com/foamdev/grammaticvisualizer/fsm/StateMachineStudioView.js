@@ -63,7 +63,9 @@ foam.CLASS({
     { name: 'CONNECT_HINT',      message: 'Now click the state the new arrow goes to.' },
     { name: 'STATE_LABEL',       message: 'State' },
     { name: 'EVENT_LABEL',       message: 'Event' },
-    { name: 'NEW_MACHINE_NAME',  message: 'New machine' }
+    { name: 'NEW_MACHINE_NAME',  message: 'New machine' },
+    { name: 'NOT_DRAWN',         message: 'Kept in the JSON but not drawn:' },
+    { name: 'UNSAVED_BLOCK',     message: 'You have unsaved changes. Save them, or press Discard changes, first.' }
   ],
 
   css: `
@@ -101,7 +103,16 @@ foam.CLASS({
           placeholder: '-'
         };
       },
-      postSet: function(_, n) { if ( ! this.feedback_ && n ) this.loadMachine(n); }
+      postSet: function(o, n) {
+        if ( this.feedback_ || ! n ) return;
+        if ( this.dirty ) {
+          // Never drop unsaved work by switching machines; put the picker back.
+          this.quiet_(function() { this.machineId = o; });
+          this.opError = this.UNSAVED_BLOCK;
+          return;
+        }
+        this.loadMachine(n);
+      }
     },
     { class: 'String', name: 'name' },
     { class: 'String', name: 'description' },
@@ -112,6 +123,28 @@ foam.CLASS({
       postSet: function(_, n) { if ( ! this.feedback_ ) this.onText(n); }
     },
     { class: 'String', name: 'parseError' },
+    {
+      class: 'String',
+      name: 'savedSnapshot_',
+      hidden: true,
+      documentation: 'Name, description and JSON as last loaded, saved or started; dirty compares against it.'
+    },
+    {
+      class: 'Boolean',
+      name: 'dirty',
+      expression: function(name, description, definitionText, savedSnapshot_) {
+        // Nothing loaded yet: nothing to lose.
+        return !! savedSnapshot_ && JSON.stringify([ name, description, definitionText ]) !== savedSnapshot_;
+      }
+    },
+    {
+      class: 'String',
+      name: 'unknownNote',
+      expression: function(machine) {
+        var keys = machine ? this.codec.unknownKeys(machine) : [];
+        return keys.length ? this.NOT_DRAWN + ' ' + keys.join(', ') : '';
+      }
+    },
     {
       name: 'machine',
       documentation: 'The machine JSON object: the one source of truth.',
@@ -177,7 +210,12 @@ foam.CLASS({
       name: 'importFile',
       label: 'JSON file',
       view: { class: 'foam.u2.view.FileUploadTextField' },
-      postSet: function(_, n) { if ( n ) this.openText(n); }
+      postSet: function(_, n) {
+        if ( ! n ) return;
+        this.quiet_(function() { this.importFile = ''; }); // so the same file can be opened again
+        if ( this.dirty ) { this.importNotes = this.UNSAVED_BLOCK; return; }
+        this.openText(n);
+      }
     },
     { class: 'Array', name: 'steps', documentation: 'Mirror of runner.history for the Steps tab.' },
     { name: 'codec',  hidden: true, factory: function() { return this.MachineCodec.create(); } },
@@ -218,7 +256,7 @@ foam.CLASS({
           .start().addClass(this.myClass('side'))
             .start().addClass(this.myClass('row'))
               .add(this.MACHINE_ID)
-              .add(this.NEW_MACHINE, this.SAVE_MACHINE, this.DELETE_MACHINE)
+              .add(this.NEW_MACHINE, this.SAVE_MACHINE, this.DISCARD_CHANGES, this.DELETE_MACHINE)
             .end()
             .call(function() { self.field_(this, self.NAME_LABEL, self.NAME); })
             .call(function() { self.field_(this, self.DESCRIPTION_LABEL, self.DESCRIPTION); })
@@ -228,6 +266,7 @@ foam.CLASS({
                   .start('span').addClass(this.myClass('hint')).add(this.JSON_HELP).end()
                   .add(this.DEFINITION_TEXT)
                   .start().addClass(this.myClass('error')).show(this.parseError$).add(this.parseError$).end()
+                  .start().addClass(this.myClass('hint')).show(this.unknownNote$).add(this.unknownNote$).end()
                 .end()
               .end()
               .start(this.Tab, { label: this.CODE_TAB })
@@ -326,11 +365,12 @@ foam.CLASS({
     },
 
     function applyOp(r) {
-      /** Takes a MachineOps result: shows a refusal, or makes the new machine current and writes the JSON. */
+      /** Takes a MachineOps result: shows a refusal, or writes the JSON and makes the new machine current. */
       if ( r.error ) { this.opError = r.error; return false; }
       this.opError = '';
-      this.machine = r.machine;
+      // JSON first, so a failure further down cannot leave the text behind the canvas.
       this.quiet_(function() { this.definitionText = this.codec.stringify(r.machine); });
+      this.machine = r.machine;
       this.parseError = '';
       return true;
     },
@@ -340,6 +380,10 @@ foam.CLASS({
       if ( ! s || ! m ) return;
       if ( s.kind === 'state' && ! m.states[s.state] ) this.selection = null;
       if ( s.kind === 'arrow' && ! ( m.states[s.from] && m.states[s.from].on && m.states[s.from].on[s.event] !== undefined ) ) this.selection = null;
+    },
+
+    function markSaved_() {
+      this.savedSnapshot_ = JSON.stringify([ this.name, this.description, this.definitionText ]);
     },
 
     function openText(text) {
@@ -352,11 +396,13 @@ foam.CLASS({
       this.layout = {};
       this.selection = null;
       this.definitionText = this.codec.stringify(p.machine);
+      this.markSaved_();
     },
 
     async function loadMachine(id) {
       var m = this.machineDAO && await this.machineDAO.find(id);
-      if ( ! m ) return;
+      // A slower, earlier load must not land after a later pick.
+      if ( ! m || id !== this.machineId ) return;
       var layout = {};
       try { layout = m.layout ? JSON.parse(m.layout) : {}; } catch (e) { layout = {}; }
       this.name        = m.name;
@@ -367,6 +413,7 @@ foam.CLASS({
       this.layout      = layout;
       this.definitionText = m.definition;
       if ( this.definitionText === m.definition && ! this.machine ) this.onText(m.definition);
+      this.markSaved_();
     },
 
     function renameSelectedState(n) {
@@ -415,6 +462,7 @@ foam.CLASS({
     {
       name: 'newMachine',
       label: 'New',
+      confirmationRequired: function(dirty) { return dirty; },
       code: function() {
         this.quiet_(function() { this.machineId = 0; });
         this.name = this.NEW_MACHINE_NAME;
@@ -423,6 +471,7 @@ foam.CLASS({
         this.selection = null;
         this.importNotes = '';
         this.definitionText = this.codec.stringify({ id: 'newMachine', initial: 'idle', states: { idle: {} } });
+        this.markSaved_();
       }
     },
     {
@@ -439,6 +488,7 @@ foam.CLASS({
         if ( this.machineId ) m.id = this.machineId;
         var stored = await this.machineDAO.put(m);
         this.quiet_(function() { this.machineId = stored.id; });
+        this.markSaved_();
         return stored;
       }
     },
@@ -446,11 +496,13 @@ foam.CLASS({
       name: 'deleteMachine',
       label: 'Delete',
       buttonStyle: 'TERTIARY',
+      confirmationRequired: function() { return true; },
       isEnabled: function(machineId) { return !! machineId; },
       code: async function() {
         var m = await this.machineDAO.find(this.machineId);
         if ( m ) await this.machineDAO.remove(m);
         var s = await this.machineDAO.limit(1).select();
+        this.markSaved_(); // the deleted machine's edits go with it
         if ( s.array[0] ) { this.quiet_(function() { this.machineId = 0; }); this.machineId = s.array[0].id; }
         else this.newMachine();
       }
@@ -528,6 +580,7 @@ foam.CLASS({
       name: 'openFoamFSM',
       label: 'Open',
       buttonStyle: 'SECONDARY',
+      confirmationRequired: function(dirty) { return dirty; },
       code: function() {
         var cls = foam.maybeLookup(this.foamClassId);
         if ( ! cls || ! foam.lang.StateMachineEnum.isSubClass(cls) ) { this.importNotes = this.NOT_A_FSM; return; }
@@ -539,6 +592,19 @@ foam.CLASS({
         this.selection = null;
         this.definitionText = this.codec.stringify(r.machine);
         this.importNotes = r.notes.join(' ');
+        this.markSaved_();
+      }
+    },
+    {
+      name: 'discardChanges',
+      label: 'Discard changes',
+      buttonStyle: 'TERTIARY',
+      isAvailable: function(dirty) { return dirty; },
+      code: function() {
+        this.opError = '';
+        this.selection = null;
+        if ( this.machineId ) { var id = this.machineId; this.markSaved_(); this.loadMachine(id); }
+        else { this.markSaved_(); this.newMachine(); }
       }
     },
     {

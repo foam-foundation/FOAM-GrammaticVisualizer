@@ -86,7 +86,12 @@ foam.CLASS({
        * Keeps every stored position; places the rest in columns by distance from the
        * initial state (unreachable states in one more column), skipping taken spots.
        */
-      var out = Object.assign({}, layout || {}), names = this.codec.stateNames(machine), depth = {}, order = [];
+      var out = {}, names = this.codec.stateNames(machine), depth = {}, order = [];
+      // Keep only real positions; anything else (written outside the studio) is placed again.
+      Object.keys(layout || {}).forEach(function(k) {
+        var p = layout[k];
+        if ( p && typeof p.x === 'number' && typeof p.y === 'number' && isFinite(p.x) && isFinite(p.y) ) out[k] = p;
+      });
       if ( machine.initial && machine.states[machine.initial] ) {
         depth[machine.initial] = 0;
         order.push(machine.initial);

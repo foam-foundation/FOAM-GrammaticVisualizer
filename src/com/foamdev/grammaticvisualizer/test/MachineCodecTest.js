@@ -66,6 +66,12 @@ foam.CLASS({
       x.test(codec.parse('[]').error === '"states" must be an object', 'parse: an array is not a machine');
       x.test(codec.parse('{"states":5}').error === '"states" must be an object', 'parse: states must be an object');
       x.test(codec.parse('{"states":{}}').error === '', 'parse: an empty machine is valid');
+      x.test(codec.parse('{"states":{"a":5}}').error === 'State "a" must be an object', 'parse: a state must be an object');
+      x.test(codec.parse('{"states":{"a":null}}').error === 'State "a" must be an object', 'parse: a null state is refused');
+      x.test(codec.parse('{"states":{"a":{"on":"GO"}}}').error === '"on" of state "a" must be an object', 'parse: on must be an object');
+      x.test(codec.parse('{"states":{"a":{"on":{"GO":{"target":"b"}}}}}').error === 'a on GO: the target must be a state name', 'parse: object-form targets are refused with a message');
+      x.test(JSON.stringify(codec.unknownKeys(codec.parse('{"initial":"a","meta":1,"states":{"a":{"entry":"x","on":{"GO":"a"}},"b":{"type":"final","tags":[]}}}').machine)) === JSON.stringify([ 'meta', 'a.entry', 'b.tags' ]), 'unknownKeys lists keys the studio does not draw');
+      x.test(codec.unknownKeys(save()).length === 0, 'unknownKeys: none in the Save button');
       var kept = codec.stringify(codec.parse('{"initial":"a","states":{"a":{"x":1}},"meta":{"k":2}}').machine);
       x.test(kept.indexOf('"meta"') >= 0 && kept.indexOf('"x"') >= 0, 'stringify keeps unknown keys');
 
@@ -84,7 +90,7 @@ foam.CLASS({
       x.test(has(chk('{"initial":"x","states":{"a":{"type":"final"}}}'), 'unknown-initial', 'Initial state "x" does not exist.', true), 'check: unknown initial');
       x.test(has(chk('{"initial":"a","states":{"a":{"on":{"GO":"zz"}}}}'), 'unknown-target', 'a on GO goes to "zz", which does not exist.', true), 'check: unknown target');
       x.test(has(chk('{"initial":"a","states":{"a":{"on":{"X":"A"}},"A":{"type":"final"}}}'), 'case-clash', 'States "a" and "A" differ only by case.', true), 'check: states differ only by case');
-      x.test(has(chk('{"initial":"loadingData","states":{"loadingData":{"on":{"X":"loading_data"}},"loading_data":{"type":"final"}}}'), 'case-clash', 'States "loadingData" and "loading_data" differ only by case.', true), 'check: states that give the same foam.FSM name clash');
+      x.test(chk('{"initial":"loadingData","states":{"loadingData":{"on":{"X":"loading_data"}},"loading_data":{"type":"final"}}}').every(function(c) { return ! c.blocking; }), 'check: names that give the same foam.FSM name do not block (each gets its own value name)');
       x.test(has(chk('{"initial":"a","states":{"a":{"type":"final"},"b":{"type":"final"}}}'), 'unreachable', '"b" can never be reached from the initial state.', false), 'check: unreachable state');
       x.test(has(chk('{"initial":"a","states":{"a":{"on":{"GO":"b"}},"b":{}}}'), 'dead-end', '"b" has no way out and is not marked final.', false), 'check: dead end');
       x.test(has(chk('{"initial":"a","states":{"a":{"on":{"GO":"b"}},"b":{"on":{"go":"a"}}}}'), 'event-case-clash', 'Events "GO" and "go" differ only by case.', false), 'check: events differ only by case');
@@ -174,6 +180,16 @@ foam.CLASS({
       x.test(built, 'a state name that is not an identifier still builds a foam.FSM class');
       var oddBack = built && codec.fromFoamFSM(foam.lookup(pkg + '.Odd' + n)).machine;
       x.test(oddBack && oddBack.initial === 'loading data' && oddBack.states['2fa'] && oddBack.states['loading data'].on.GO === '2fa', 'round trip keeps the names "loading data" and "2fa"');
+
+      // Names that are also enum fields (view, name, label, on, values, ordinal) and names with no ASCII letters still build and round-trip.
+      var risky = { initial: 'view', states: { view: { on: { EDIT: 'name' } }, name: { on: { GO: 'label' } }, label: { on: { GO: 'on' } }, on: { on: { GO: 'values' } }, values: { on: { GO: 'ordinal' } }, ordinal: { on: { GO: 'é' } }, 'é': { on: { GO: 'ü' } }, 'ü': { on: { GO: '日本' } }, '日本': { on: { GO: '中文' } }, '中文': { type: 'final' } } };
+      x.test(codec.check(risky).every(function(c) { return ! c.blocking; }), 'check: field-like and non-Latin names do not block: ' + JSON.stringify(codec.check(risky)));
+      var riskyBuilt = true;
+      try { foam.FSM(codec.toFoamFSMSpec(risky, pkg, 'Risky' + n)); } catch (e) { riskyBuilt = e.message; }
+      x.test(riskyBuilt === true, 'a machine with field-like and non-Latin state names builds a foam.FSM class: ' + riskyBuilt);
+      var riskyBack = riskyBuilt === true && codec.fromFoamFSM(foam.lookup(pkg + '.Risky' + n)).machine;
+      x.test(riskyBack && same(withoutId(riskyBack), withoutId(risky)), 'and round-trips every name');
+      x.test(new Set(Object.values(codec.valueNames(risky))).size === 10, 'valueNames: every state gets its own value name: ' + JSON.stringify(codec.valueNames(risky)));
 
       var t = codec.fromFoamFSM(foam.lang.test.TestStateMachine);
       x.test(t.machine.initial === 'New', 'fromFoamFSM(TestStateMachine): initial is the label New');

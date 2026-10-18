@@ -77,6 +77,10 @@ foam.CLASS({
       var overlaps = function(p, q) { return Math.abs(p.x - q.x) < v.BOX_W && Math.abs(p.y - q.y) < v.BOX_H; };
       x.test(! overlaps(placed.c, placed.a) && ! overlaps(placed.c, placed.b), 'autoLayout never overlaps a new state with a saved one off the grid: ' + JSON.stringify(placed));
 
+      // Bad stored positions (written outside the studio) are replaced, never looped on.
+      var fixed = v.autoLayout({ initial: 'a', states: { a: { on: { GO: 'b' } }, b: { on: { GO: 'c' } }, c: {} } }, { a: 5, b: null, c: [ 1 ] });
+      x.test([ 'a', 'b', 'c' ].every(function(k) { return fixed[k] && typeof fixed[k].x === 'number' && typeof fixed[k].y === 'number'; }), 'autoLayout replaces positions that are not { x, y }: ' + JSON.stringify(fixed));
+
       click(stateEl('clean'));
       x.test(v.selection && v.selection.kind === 'state' && v.selection.state === 'clean', 'clicking a state selects it');
       await until(function() { return stateEl('clean') && stateEl('clean').classList.contains('selected'); });
