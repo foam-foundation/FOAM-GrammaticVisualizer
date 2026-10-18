@@ -26,6 +26,8 @@ design system · 🟡 paper cut — cost time, not design.
 | 13 | No overflow / "More" container that can hold property views | 🟡 | `OverlayActionListView` accepting any view |
 | 14 | A property's `onKey` silently overrides `RangeView`'s live default | 🟡 | `fromProperty` keeps a view-class default |
 | 15 | `TextArea` needs a hand-picked `rows`; no content sizing (suggestion) | 🟡 | `field-sizing: content` + `max-height` by default |
+| 16 | `TabChoiceView` always binds the URL | 🟡 | `memorable` switch on the view |
+| 17 | A markdown tag's class only registers once something references it | 🟡 | Eager-load files that carry a `registerElement` script |
 
 ---
 
@@ -131,3 +133,17 @@ design system · 🟡 paper cut — cost time, not design.
 **foam3** · `foam.u2.tag.TextArea` sizes by `rows` (default 4), set once at render.
 **Did** · `field-sizing: content` with a `max-height` on the viewer's two textareas; `rows` stays the floor for Firefox/Safari.
 **Fix** · ship `field-sizing: content; max-height` in `TextArea`'s own CSS so no form has to pick a row count.
+
+## 16. `TabChoiceView` always binds the URL 🟡
+
+**Needed** · a Code | Diagram tab strip on every `<grammar>` tag in a document — twenty of them on one page.
+**foam3** · `TabChoiceView` mixes in `Memorable` and its `cannedQuery` is `memorable: true` (`TabChoiceView.js:11,48-52`), so each instance writes the selected label into the URL's `query` key and reads it back on render; many instances fight over one key.
+**Did** · wrap it in `startContext({ memento_: foam.u2.memento.Memento.create() })` — a detached memento root, the trick `foam.core.reflow.example.Example` also uses.
+**Fix** · a `memorable` switch on the view, off by default when there are siblings.
+
+## 17. A markdown tag's class only registers once something references it 🟡
+
+**Needed** · `<grammar>` recognised in every flow.
+**foam3** · `registerElement` runs in a `foam.SCRIPT` inside the class file, and a class file loads on first lookup of the class. Until then `MarkdownView` renders `<grammar>` as plain text — silently. `<example>` only works because the console's `example` command `requires` it, which the loader follows.
+**Did** · a `/grammar` console command (`GrammarCommand`, listed in `journals/cmds.jrl`) that `requires` `GrammarTag`; the console loads its commands at start, so the tag is registered before any flow renders.
+**Fix** · let a pom entry mark a file eager (`{ name, flags, eager: true }`), or have `MarkdownView` try `foam.maybeLookup` on an unknown tag name.

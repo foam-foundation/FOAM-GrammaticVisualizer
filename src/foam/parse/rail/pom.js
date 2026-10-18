@@ -37,6 +37,9 @@ foam.POM({
     { name: 'RailInputRibbon', flags: 'web' },
     { name: 'DerivationPanel', flags: 'web' },
     { name: 'DocumentView', flags: 'web' },
-    { name: 'RailDiagramView', flags: 'web' }
+    { name: 'RailDiagramView', flags: 'web' },
+    { name: 'Session', flags: 'web' },
+    { name: 'GrammarTag', flags: 'web' },
+    { name: 'GrammarCommand', flags: 'web' }
   ]
 });

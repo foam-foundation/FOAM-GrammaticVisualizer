@@ -39,18 +39,12 @@ p({
   }
 })
 
-// Top-level entries for the basic user. They open the same screens as the
-// matching Admin entries (same handlers), so the Admin group stays admin-only.
-p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.flows","label":"Flows","authenticate":true,"keywords":["flow","reflow"],
-   "handler":{"class":"foam.core.menu.DAOMenu2","config":{"class":"foam.comics.v2.DAOControllerConfig","daoKey":"flowDAO"}}})
-p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.countries","label":"Countries","authenticate":true,"keywords":["country"],
-   "handler":{"class":"foam.core.menu.DAOMenu2","config":{"class":"foam.comics.v2.DAOControllerConfig","daoKey":"countryDAO"}}})
-p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.menus","label":"Menus","authenticate":true,"keywords":["menu","navigation"],
-   "handler":{"class":"foam.core.menu.DAOMenu","daoKey":"menuDAO","title":"Menus","summaryView":{"class":"foam.core.menu.TreeAltView","relationship":"foam.core.menu.MenuMenuChildrenRelationship"}}})
-p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.customise-theme","label":"Customise Theme","authenticate":true,"keywords":["theme","style"],
-   "handler":{"class":"foam.core.menu.DAOMenu2","config":{"class":"foam.comics.v2.DAOControllerConfig","daoKey":"spThemeDAO","browseTitle":"Customise Theme",
-     "browseController":{"class":"foam.core.theme.customisation.ThemeCustomisationBrowseController"}}}})
-p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.theme-all","label":"Themes - All","authenticate":true,"keywords":["theme"],
-   "handler":{"class":"foam.core.menu.DAOMenu2","config":{"class":"foam.comics.v2.DAOControllerConfig","daoKey":"themeDAO"}}})
-p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.all-views","label":"All Views","authenticate":true,"keywords":["views","demo","u2"],
-   "handler":{"class":"foam.core.menu.ViewMenu","view":{"class":"foam.demos.u2.AllViews"}}})
+// Top-level entries for the basic user. They open the same screens as the matching
+// Admin entries (same handlers), so the Admin group stays admin-only. One line each:
+// the journal reader does not join a continuation line that starts with a quoted key.
+p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.flows","label":"Flows","authenticate":true,"keywords":["flow","reflow"],"handler":{"class":"foam.core.menu.DAOMenu2","config":{"class":"foam.comics.v2.DAOControllerConfig","daoKey":"flowDAO"}}})
+p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.countries","label":"Countries","authenticate":true,"keywords":["country"],"handler":{"class":"foam.core.menu.DAOMenu2","config":{"class":"foam.comics.v2.DAOControllerConfig","daoKey":"countryDAO"}}})
+p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.menus","label":"Menus","authenticate":true,"keywords":["menu","navigation"],"handler":{"class":"foam.core.menu.DAOMenu","daoKey":"menuDAO","title":"Menus","summaryView":{"class":"foam.core.menu.TreeAltView","relationship":"foam.core.menu.MenuMenuChildrenRelationship"}}})
+p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.customise-theme","label":"Customise Theme","authenticate":true,"keywords":["theme","style"],"handler":{"class":"foam.core.menu.DAOMenu2","config":{"class":"foam.comics.v2.DAOControllerConfig","daoKey":"spThemeDAO","browseTitle":"Customise Theme","browseController":{"class":"foam.core.theme.customisation.ThemeCustomisationBrowseController"}}}})
+p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.theme-all","label":"Themes - All","authenticate":true,"keywords":["theme"],"handler":{"class":"foam.core.menu.DAOMenu2","config":{"class":"foam.comics.v2.DAOControllerConfig","daoKey":"themeDAO"}}})
+p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.all-views","label":"All Views","authenticate":true,"keywords":["views","demo","u2"],"handler":{"class":"foam.core.menu.ViewMenu","view":{"class":"foam.demos.u2.AllViews"}}})
