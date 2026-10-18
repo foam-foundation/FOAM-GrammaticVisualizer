@@ -1,2 +1,7 @@
 p({"class":"com.foamdev.grammaticvisualizer.test.SentenceTest","id":"SentenceTest","description":"Sentence Id tests"})
 p({"class":"com.foamdev.grammaticvisualizer.test.ThemeDetailViewTest","id":"ThemeDetailViewTest","description":"Theme detail view: swatches, token overrides, bounded images, input sample"})
+p({"class":"com.foamdev.grammaticvisualizer.test.FSMEventsTest","id":"FSMEventsTest","description":"foam.FSM events refinement: on map per state and send<Name>(event)"})
+p({"class":"com.foamdev.grammaticvisualizer.test.MachineCodecTest","id":"MachineCodecTest","description":"State machine studio: JSON codec, checks, Mermaid, foam.FSM export/import and edit operations"})
+p({"class":"com.foamdev.grammaticvisualizer.test.MachineRunnerTest","id":"MachineRunnerTest","description":"State machine studio: step a machine on a runtime foam.FSM class"})
+p({"class":"com.foamdev.grammaticvisualizer.test.MachineCanvasTest","id":"MachineCanvasTest","description":"State machine studio: SVG canvas with select, drag and connect"})
+p({"class":"com.foamdev.grammaticvisualizer.test.StateMachineStudioViewTest","id":"StateMachineStudioViewTest","description":"State machine studio screen: two-way JSON and canvas, stepping, checks, code, save"})

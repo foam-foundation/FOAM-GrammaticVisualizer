@@ -1,6 +1,7 @@
 foam.POM({
   name: 'sentence',
   projects: [
+    { name: 'fsm/pom' },
     { name: 'test/pom',                 flags: 'test' }
   ],
   files: [

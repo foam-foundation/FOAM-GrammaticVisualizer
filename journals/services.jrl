@@ -17,3 +17,23 @@ p({
   """,
   "client": `{"of":"com.foamdev.grammaticvisualizer.Sentence"}`
 })
+
+p({
+  "class": "foam.core.boot.CSpec",
+  "name": "machineDAO",
+  "description": "State machines saved by the State Machines screen",
+  "serve": true,
+  "authenticate": true,
+  "keywords": [ "machine", "state machine", "fsm" ],
+  "serviceScript": """
+    return new foam.dao.EasyDAO.Builder(x)
+      .setOf(com.foamdev.grammaticvisualizer.fsm.Machine.getOwnClassInfo())
+      .setPm(true)
+      .setSeqNo(true)
+      .setAuthorize(false)
+      .setJournalType(foam.dao.JournalType.SINGLE_JOURNAL)
+      .setJournalName("machines")
+      .build();
+  """,
+  "client": `{"of":"com.foamdev.grammaticvisualizer.fsm.Machine"}`
+})

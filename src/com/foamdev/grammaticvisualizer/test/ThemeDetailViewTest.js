@@ -109,6 +109,8 @@ foam.CLASS({
       await dao.put(this.CSSTokenOverride.create({ theme: 't1', source: 'textDefault', target: '#222222' }, y));
       await until(function() { return rows().length === 2; });
       x.test(rows().length === 2, 'a DAO put adds a row: ' + rows().length);
+      // The icon is drawn a moment after the row appears; checking at once failed now and then.
+      await until(function() { return rows()[1] && rows()[1].querySelector('.foam-u2-ActionView-remove svg, .foam-u2-ActionView-remove img'); });
       var removeBtn = rows()[1].querySelector('.foam-u2-ActionView-remove');
       x.test(!! removeBtn && !! removeBtn.querySelector('svg, img'), 'each row has a remove action, drawn as the trash icon');
       removeBtn.click();

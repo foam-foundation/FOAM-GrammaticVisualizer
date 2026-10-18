@@ -16,7 +16,16 @@ Two ways to see the viewer:
 - **Inside the app** — menu "Grammar Visualizer" (`#grammaticVisualizer.grammar`), a `ViewMenu` wrapping `foam.parse.rail.RailDiagramView`. Needs the Java build.
 - **Standalone** — `demo/index.html`, loads FOAM from source, no build: `python3 -m http.server 8000` → http://localhost:8000/demo/index.html.
 
-FOAM itself is the `foam3/` git submodule (clone with `--recurse-submodules`, or `git submodule update --init`). Its own guidance is in `foam3/doc/guides/claude.md` and the skills under `foam3/.claude/skills/` (`foam-view-builder`, `foam-design-patterns`, …) — read those before writing a view, model, DAO or CSS. Design-system shortcomings found while building here are recorded in `docs/foam3-design-system-gaps.md`; what slowed *an agent* down (discoverability, silent failures, build cost) goes in `docs/foam3-agent-experience.md`. Add an entry when you hit a new one. Before writing a script or tool, look in `foam3/tools/` first — `exampleNode.js` is the template for a FOAM script in node.
+FOAM itself is the `foam3/` git submodule (clone with `--recurse-submodules`, or `git submodule update --init`). Its own guidance is in `foam3/doc/guides/claude.md` and the skills under `foam3/.claude/skills/` (`foam-view-builder`, `foam-design-patterns`, …) — read those before writing a view, model, DAO or CSS. Before writing a script or tool, look in `foam3/tools/` first — `exampleNode.js` is the template for a FOAM script in node.
+
+## foam3 feedback lists
+
+Two lists, shared by all my foam3 projects (symlinks into `~/Documents/GitHub/foam3-notes/`, not committed):
+
+- `docs/foam3-design-system-gaps.md`: what foam3 lacks.
+- `docs/foam3-agent-experience.md`: what slowed the agent down (discoverability, silent failures, build cost).
+
+When you hit a new one, add it in the same session. The rules are at the top of each file. Commit changes in `~/Documents/GitHub/foam3-notes`; never push it without asking. Local `post-checkout`, `post-rewrite` and `post-merge` hooks put the symlinks back after a branch switch, rebase or merge; branches older than `feature/fsm-studio` still commit their own old copy, so edit the shared file, not that one.
 
 ## Commands
 
@@ -55,6 +64,7 @@ Two things that cost time if you don't know them:
 | `src/foam/parse/rail/` | The viewer library, package `foam.parse.rail` (kept in FOAM's namespace; came from foam3 PR 5607) |
 | `src/foam/parse/rail/test/` | Its tests + `tests.jrl`; add a class to `pom.js`, `tests.jrl` and the README list |
 | `src/com/foamdev/grammaticvisualizer/` | The app: `Sentence` model (placeholder), `GrammarVisualizerView` (the menu screen) |
+| `src/com/foamdev/grammaticvisualizer/fsm/` | State Machines screen (`#grammaticVisualizer.stateMachines`): a machine is XState JSON in `machineDAO`; `MachineCodec` (formats, checks), `MachineOps` (edits), `MachineRunner` (steps a runtime `foam.FSM`), `MachineCanvas` (SVG), `StateMachineStudioView`. `FSMEvents.js` refines `foam.FSM` with an `on` map and `send<Name>(event)` (gap 29) |
 | `journals/*.jrl` | App config as data: `services.jrl` (DAOs), `menus.jrl` (one entry per line — the reader cuts two-line entries), `groups.jrl` + `groupPermissionJunctions.jrl` (what `demo` may see), `users.jrl`, `themes.jrl`, `sentences.jrl` (seed rows), `flows.jrl` + `cmds.jrl` (Reflow) |
 | `journals/*.md` | A markdown file with a `<flow name="…"/>` tag becomes a Reflow flow at build time (`foam3/tools/JournalMaker.js`); `examples-parsers.md` is the parser tutorial with a `<grammar>` block per parser |
 | `deployment/demo/` | `-Jdemo` overlay: the `demo` user |

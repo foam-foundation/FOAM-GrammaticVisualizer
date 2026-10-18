@@ -38,6 +38,7 @@ p({
     "view":{"class":"com.foamdev.grammaticvisualizer.GrammarVisualizerView"}
   }
 })
+p({"class":"foam.core.menu.Menu","id":"grammaticVisualizer.stateMachines","label":"State Machines","authenticate":true,"keywords":["state machine","fsm","statechart"],"handler":{"class":"foam.core.menu.ViewMenu","view":{"class":"com.foamdev.grammaticvisualizer.fsm.StateMachineStudioView"}}})
 
 // Top-level entries for the basic user. They open the same screens as the matching
 // Admin entries (same handlers), so the Admin group stays admin-only. One line each:
