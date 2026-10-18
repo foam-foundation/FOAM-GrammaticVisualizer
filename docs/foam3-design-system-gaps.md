@@ -28,6 +28,17 @@ design system · 🟡 paper cut — cost time, not design.
 | 15 | `TextArea` needs a hand-picked `rows`; no content sizing (suggestion) | 🟡 | `field-sizing: content` + `max-height` by default |
 | 16 | `TabChoiceView` always binds the URL | 🟡 | `memorable` switch on the view |
 | 17 | A markdown tag's class only registers once something references it | 🟡 | Eager-load files that carry a `registerElement` script |
+| 18 | Two theming systems: Theme colour fields are CSS macros, not tokens | 🟠 | Retire the macro fields or make them token overrides |
+| 19 | No screen for `CSSTokenOverride`, the real per-theme theming | 🟠 | A token override editor on the Theme screen |
+| 20 | `ImageView` renders a picture at natural size | 🟡 | A bounded preview view for `Image` properties |
+| 21 | Theme fields explain nothing: no `help`, no units, raw class names | 🟡 | `help` on every Theme property |
+| 22 | `TabbedDetailView` renders every tab twice; async views in the first tree crash | 🟠 | Apply section visibility synchronously on first render |
+| 23 | One permission round trip per property on first open of a record | 🟡 | Batch `auth.check` per class |
+| 24 | `DAOBrowserView` picks canned query index 1 by default | 🟡 | Default to 0 |
+| 25 | A bare word in the table search box matches nothing | 🟠 | Fall back to keyword search when the query parser yields no predicate |
+| 26 | A table cell can't have an edit view: every cell is forced to VIEW | 🟠 | A per-column `tableCellView` / mode-aware cell, plus an inline-edit table mode |
+| 27 | A detail view can't join the record's Save | 🟠 | A `save` / `cancel` topic on the update view, or a `saveHooks` export |
+| 28 | No "unsaved changes" guard when leaving a screen | 🟠 | A stack-level `canLeave` check plus one standard Discard / Keep dialog |
 
 ---
 
@@ -147,3 +158,83 @@ design system · 🟡 paper cut — cost time, not design.
 **foam3** · `registerElement` runs in a `foam.SCRIPT` inside the class file, and a class file loads on first lookup of the class. Until then `MarkdownView` renders `<grammar>` as plain text — silently. `<example>` only works because the console's `example` command `requires` it, which the loader follows.
 **Did** · a `/grammar` console command (`GrammarCommand`, listed in `journals/cmds.jrl`) that `requires` `GrammarTag`; the console loads its commands at start, so the tag is registered before any flow renders.
 **Fix** · let a pom entry mark a file eager (`{ name, flags, eager: true }`), or have `MarkdownView` try `foam.maybeLookup` on an unknown tag name.
+
+## 18. Two theming systems: Theme colour fields are CSS macros, not tokens 🟠
+
+**Needed** · a Theme screen where changing a colour changes the app.
+**foam3** · `Theme.primary1..5`, `secondary*`, `approval*`, `warning*`, `destructive*`, `grey*`, `black`, `white`, `inputHeight`, `inputVerticalPadding`, `inputHorizontalPadding` are plain strings that `ApplicationController.MACROS` text-replaces into `/*%PRIMARY1%*/` and `$inputHeight` in CSS (`ApplicationController.js:132-178`, `:676-717`). Five files still use the colour macros; every view written with `$primary500`-style tokens ignores them. The screen gives no hint which system a field belongs to.
+**Did** · dropped the Colours tab from the app's Theme screen; the CSS tokens tab (overrides + catalogue) stands in its place. Removal from foam3 sized at 4-6 days (deprecate first: 1-1.5).
+**Fix** · drop the macro colour fields, or have the app convert them into `CSSTokenOverride` rows on save.
+
+## 19. No screen for `CSSTokenOverride`, the real per-theme theming 🟠
+
+**Needed** · set `$primary500` for one theme, light and dark.
+**foam3** · `cssTokenOverrideDAO` + `CSSTokenOverrideService` do exactly this (`doc/fbe/CSSTokens.md` "Overriding Tokens"), but no menu, no Theme section and no view lists or edits the rows. The only way in is a journal line or the generic Data Management browser.
+**Did** · `TokenOverridesView` (table with swatches, add form, per-row remove) under the Colours tab of the app's Theme screen.
+**Fix** · ship that table in `foam.core.theme` and reference it from a `tokens` section on `Theme`.
+
+## 20. `ImageView` renders a picture at natural size 🟡
+
+**Needed** · a logo preview on the Theme screen.
+**foam3** · `Theme.logo` and four siblings use `MultiView [TextArea, ImageView]`; `foam.u2.view.ImageView` tags `foam.u2.tag.Image` with no width, height or CSS, so a 1200px logo fills the page. `ThemeImageUploadView` (Customise Theme) bounds its preview with its own `max-width: 50%`.
+**Did** · `ThemeImagesView`: a 15rem × 7.5rem box per image, light and dark surface, `object-fit: contain`.
+**Fix** · `ImageView` takes a `maxWidth`/`maxHeight` (or a `displayWidth` the `Image` property already has) and bounds by default.
+
+## 21. Theme fields explain nothing 🟡
+
+**Needed** · a user who opens the Inputs or Navigation tab should learn what `inputHeight` or `sideNav` does.
+**foam3** · the properties have `documentation` (shown nowhere in the UI) and no `help`; `PropertyBorder` renders `help` as a ? icon with an expandable text (`PropertyBorder.js:375-414`). `sideNav` is a JSON view spec in a plain string field; `topNavigation` and `footerView` are class ids with no default shown.
+**Did** · `ThemeDetailView` passes `help` per field through `SectionView.config`; `InputSizingView` adds a live sample box.
+**Fix** · `help` on the Theme properties in foam3; a view-spec editor for `sideNav`.
+
+
+## 22. `TabbedDetailView` renders every tab twice; async views in the first tree crash 🟠
+
+**Needed** · open a Theme, press Edit.
+**foam3** · `TabbedDetailView.updateVis` is `isMerged` with a 100ms delay (`TabbedDetailView.js:125-132`), so the first render runs with `stableVisibilities_ = []`, which the template treats as "every section". The real list arrives 100ms later and the whole tab tree is rebuilt. Views in the first tree that render asynchronously are still awaiting: `FObjectView` (the default for `appConfig`, an `FObjectProperty`) awaits `choicesLoaded`, resumes on a detached element, and `end()` returns `undefined`, so `.start()` throws (`FObjectView.js:290`). Every open also logs forty "Attempt to add child to detached parent" warnings. Stock foam3's Admin → Themes - All shows both.
+**Did** · `ThemeDetailView` redeclares `updateVis` without the merge; Theme's sections resolve synchronously, so the first render is the only one.
+**Fix** · apply the visibility list synchronously on first render and keep the merge for later changes; or have `addChild_` on a detached parent stop the async render instead of warning.
+
+## 23. One permission round trip per property on first open of a record 🟡
+
+**Needed** · open a Theme as a non-admin.
+**foam3** · every Theme property is `writePermissionRequired`, so `createVisibilityFor` (`Element2.js:1885-1915`) runs `auth.check` for `theme.rw.<prop>` then `theme.ro.<prop>`, one request each, about fifty per record. `CachedAuthServiceProxy` caches per permission string for the session (`CachedAuthServiceProxy.js:46-55`), so only the first open pays, but that first open fills in over four to six seconds, tab by tab. There is no batched `checkAll`.
+**Did** · nothing; rendered the tabs once so at least the chrome does not rebuild while the fields arrive (gap 22).
+**Fix** · one `auth.checkAll(class)` round trip that returns every `<class>.rw/ro.<prop>` answer at once, used by the sectioned detail views.
+
+## 24. `DAOBrowserView` picks canned query index 1 by default 🟡
+
+**Needed** · a table whose first canned query ("All") is the one shown on open.
+**foam3** · `DAOBrowserView.cannedPredicate` falls back to `config$cannedQueries[1]` when `preSelectedCannedQuery` is null (`DAOBrowserView.js:190-194`), so the second tab is selected on open unless the config says `0`.
+**Did** · `preSelectedCannedQuery: 0` on the catalogue's config.
+**Fix** · default to index 0.
+
+## 25. A bare word in the table search box matches nothing 🟠
+
+**Needed** · type `Canada` into the Countries list, or `borderBrand` into the token catalogue, and see the rows filter.
+**foam3** · `DAOControllerConfig.searchMode` defaults to `FULL`, where `foam.parse.QueryRouter` tries the simple query language first and only runs the full-text `KEYWORD` search when the text starts with `TEXT:` or `:` (`QueryRouter.js`, grammar `FULL: alt(query, text)`, `text: seq1(1, key('TEXT:' | ':'), ...)`). A bare word parses to no predicate, the URL still records `search=Canada`, and the table shows every row. Seen on the stock Countries menu as `demo`; `:Canada` gives one row.
+**Did** · `SIMPLE` mode is no better: its grammar is the same `text` rule with the prefix. The catalogue hides the query bar (`hideQueryBar`) and keeps a `ClearableSearchField` of its own that sets `config.searchPredicate = KEYWORD(text)`; `KEYWORD` works on a client `MDAO`.
+**Fix** · in `FULL`, fall back to `KEYWORD(text)` when the query parser produces nothing; or make the placeholder say the prefix.
+
+## 26. A table cell can't have an edit view: every cell is forced to VIEW 🟠
+
+**Needed** · the token catalogue, in EDIT mode, with Light and Dark as colour pickers in the row and an Add / Save override action per row.
+**foam3** · `UnstyledTableRow` renders each cell inside `startContext({ controllerMode: 'VIEW' })` and only through `prop.tableCellFormatter.format(...)` (`UnstyledTableRow.js:188-220`). The formatter gets a projection of the visible columns, not the row object, and there is no per-column view or edit view. Row actions are a context menu, not a column. Clicks on an input inside a cell also reach the row's `click`, which opens the record by default.
+**Did** · `TokenEditFormatter` looks the catalogue up in the context, gets an editor object per row, and opens its own context with that editor as `data` and the screen's mode, so `ModeAltView` can pick the read or the edit view. The catalogue sets a no-op `click`, and re-renders the rows (`on.reset`) when the mode changes.
+**Fix** · a mode-aware cell: let a property's `view` (with `ModeAltView`) render in the table under the table's own `controllerMode`, and support action columns. An "inline edit" table mode would cover the rest.
+
+## 27. A detail view can't join the record's Save 🟠
+
+**Needed** · the Theme screen's override rows are other records (`CSSTokenOverride`). A change staged in a row should be stored when the page's Save is pressed, and dropped on Cancel.
+**foam3** · `DAOUpdateView.save` does `config.dao.put(workingData)` then `stack.back()` (`DAOUpdateView.js:117-145`). Cancel is also `stack.back()`. The view publishes `finished` only when the record changed, does not export `config`, and has no hook for child views. A view inside it cannot tell Save from Cancel.
+**Did** · `ThemeTokensView` imports `themeDAO` and listens for a put of this theme on it. That put is what Save does, so staged rows are stored then; Cancel never puts, so they are dropped with the view. This depends on the menu's `daoKey` being `themeDAO`.
+**Fix** · `saved` and `cancelled` topics on `DAOUpdateView` (and `DAOCreateView`), exported to the detail view; or an exported `saveHooks` list the Save action awaits before `stack.back()`.
+**Closest existing hook** · comics v3 `DetailView` lets a *model* override `save` and `cancelEdit` with a `foam.comics.v3.ComicsAction` of the same name (`DetailView.js:295-318`, documented in `doc/guides/Comics.md`). That is per model, not per view, and this menu runs comics v2 (`DAOMenu2`), so it does not apply here.
+
+## 28. No "unsaved changes" guard when leaving a screen 🟠
+
+**Needed** · warn before Cancel, Back, or a menu click throws away staged edits ("You have unsaved changes: Discard / Keep editing").
+**foam3** · searched `foam/u2/stack`, `foam/core/u2/navigation`, `ApplicationController`, `foam/core/menu`, comics v2 and v3: nothing can veto navigation. `Stack.push` / `back` / `jump` have no check, and no `beforeunload` handler exists outside debug tools. What does exist: `foam.u2.dialog.ConfirmationModal` (a reusable dialog), `Action.confirmationRequired` (confirm before one action runs, `doc/guides/Actions.md`), wizard `discard`, and hand-built "Unsaved Changes Detected" dialogs inside the Reflow `Console` only (`Console.js:2025`).
+**Also searched** · every branch and the full git history: no `canLeave` / `canDeactivate` / `beforeLeave` / `isDirty`-style guard was ever committed. Commit `4f894f0413` (FOAM-5431) left a note in comics v3 `CreateView.cancel`: *"ideally, if the user has made any changes, Cancel would prompt a 'changes will be lost — confirm?' dialog … best tackled as a separate issue"*; `ebc350c152` removed the note without building it. Closest per-view versions: the wizard's exit prompt (`IncrementalStepWizardView.js:283-305`, always asks, X button only) and the old u2 `DAOUpdateController` `dirty_` flag (`browser.js:488`, hides Back while dirty, no dialog). Choke points for a real guard: `Stack.jump` (pop goes through it; push does not), `ApplicationController.pushMenu`, and `Memento.onHashChange` (runs after the URL changed, so it would have to restore it).
+**Did** · nothing yet; the Theme screen shows staged rows instead (status line planned).
+**Fix** · a `canLeave()` (or `dirty` slot) that `Stack` asks the top view before `back` / `push` / `jump`, a `beforeunload` hook for tab close, and one standard Discard / Keep editing dialog built on `ConfirmationModal`. Document it next to `confirmationRequired`.
