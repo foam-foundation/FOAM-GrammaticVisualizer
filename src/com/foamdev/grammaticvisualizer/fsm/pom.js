@@ -5,6 +5,7 @@ foam.POM({
     { name: 'MachineCodec',                   flags: 'js' },
     { name: 'MachineOps',                     flags: 'js' },
     { name: 'MachineRunner',                  flags: 'js' },
+    { name: 'MachineCanvas',                  flags: 'web' },
     { name: 'examples/SaveButton',            flags: 'js' },
     { name: 'examples/LoginForm',             flags: 'js' }
   ]

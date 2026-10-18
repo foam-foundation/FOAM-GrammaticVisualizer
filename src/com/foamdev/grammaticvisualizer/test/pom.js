@@ -5,6 +5,7 @@ foam.POM({
     { name: 'ThemeDetailViewTest',       flags: 'js&test|java&test' },
     { name: 'FSMEventsTest',             flags: 'js&test|java&test' },
     { name: 'MachineCodecTest',          flags: 'js&test|java&test' },
-    { name: 'MachineRunnerTest',         flags: 'js&test|java&test' }
+    { name: 'MachineRunnerTest',         flags: 'js&test|java&test' },
+    { name: 'MachineCanvasTest',         flags: 'js&test|java&test' }
   ]
 });
