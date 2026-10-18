@@ -25,7 +25,7 @@ Two lists, shared by all my foam3 projects (symlinks into `~/Documents/GitHub/fo
 - `docs/foam3-design-system-gaps.md`: what foam3 lacks.
 - `docs/foam3-agent-experience.md`: what slowed the agent down (discoverability, silent failures, build cost).
 
-When you hit a new one, add it in the same session. The rules are at the top of each file. Commit changes in `~/Documents/GitHub/foam3-notes`; never push it without asking. A local `post-checkout` hook puts the symlinks back after a branch switch; branches older than `feature/fsm-studio` still commit their own old copy, so edit the shared file, not that one.
+When you hit a new one, add it in the same session. The rules are at the top of each file. Commit changes in `~/Documents/GitHub/foam3-notes`; never push it without asking. Local `post-checkout`, `post-rewrite` and `post-merge` hooks put the symlinks back after a branch switch, rebase or merge; branches older than `feature/fsm-studio` still commit their own old copy, so edit the shared file, not that one.
 
 ## Commands
 
