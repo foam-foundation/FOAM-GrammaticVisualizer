@@ -1,0 +1,146 @@
+/**
+ * @license
+ * Copyright 2026 The FOAM Authors. All Rights Reserved.
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+foam.CLASS({
+  package: 'com.foamdev.grammaticvisualizer.test',
+  name: 'MachineCodecTest',
+  extends: 'foam.core.test.JSTest',
+
+  requires: [
+    'com.foamdev.grammaticvisualizer.fsm.MachineCodec',
+    'com.foamdev.grammaticvisualizer.fsm.MachineOps'
+  ],
+
+  documentation: `
+    The state machine studio's pure helpers: MachineCodec (parse, checks,
+    Mermaid, foam.FSM export and import) and MachineOps (edits). Machines are
+    XState-shaped JSON objects; ops never mutate their input.
+  `,
+
+  constants: {
+    SAVE_BUTTON: `{
+  "id": "saveButton",
+  "initial": "clean",
+  "states": {
+    "clean":  { "on": { "EDIT": "dirty" } },
+    "dirty":  { "on": { "SAVE": "saving", "DISCARD": "clean" } },
+    "saving": { "on": { "SUCCESS": "clean", "FAIL": "error" } },
+    "error":  { "on": { "RETRY": "saving" } }
+  }
+}`
+  },
+
+  methods: [
+    async function runTest(x) {
+      // A throw inside the body would lose every result already recorded; report it as one failure instead.
+      try { await this.runTest_(x); }
+      catch (e) { x.test(false, 'test body threw: ' + (e && e.stack || e)); }
+    },
+
+    function canon(v) {
+      /** JSON with sorted keys, for deep equality that ignores key order. */
+      var self = this;
+      if ( Array.isArray(v) ) return '[' + v.map(function(e) { return self.canon(e); }).join(',') + ']';
+      if ( v && typeof v === 'object' ) return '{' + Object.keys(v).sort().map(function(k) { return JSON.stringify(k) + ':' + self.canon(v[k]); }).join(',') + '}';
+      return JSON.stringify(v);
+    },
+
+    async function runTest_(x) {
+      var self  = this;
+      var codec = this.MachineCodec.create({}, x);
+      var ops   = this.MachineOps.create({}, x);
+      var save  = function() { return codec.parse(self.SAVE_BUTTON).machine; };
+      var same  = function(a, b) { return self.canon(a) === self.canon(b); };
+      var has   = function(list, kind, message, blocking) {
+        return list.some(function(c) { return c.kind === kind && c.message === message && c.blocking === blocking; });
+      };
+
+      // ---- parse / stringify ------------------------------------------------
+      var p = codec.parse(this.SAVE_BUTTON);
+      x.test(p.error === '' && Object.keys(p.machine.states).length === 4, 'parse: the Save button has 4 states and no error');
+      p = codec.parse('{');
+      x.test(p.error !== '' && p.machine === null, 'parse: invalid JSON gives an error and no machine');
+      x.test(codec.parse('[]').error === '"states" must be an object', 'parse: an array is not a machine');
+      x.test(codec.parse('{"states":5}').error === '"states" must be an object', 'parse: states must be an object');
+      x.test(codec.parse('{"states":{}}').error === '', 'parse: an empty machine is valid');
+      var kept = codec.stringify(codec.parse('{"initial":"a","states":{"a":{"x":1}},"meta":{"k":2}}').machine);
+      x.test(kept.indexOf('"meta"') >= 0 && kept.indexOf('"x"') >= 0, 'stringify keeps unknown keys');
+
+      // ---- names ----------------------------------------------------------
+      x.test(same(codec.stateNames(save()), [ 'clean', 'dirty', 'saving', 'error' ]), 'stateNames in order');
+      x.test(same(codec.events(save()), [ 'EDIT', 'SAVE', 'DISCARD', 'SUCCESS', 'FAIL', 'RETRY' ]), 'events in first-seen order');
+      x.test(codec.arrows(save()).length === 6 && same(codec.arrows(save())[2], { from: 'dirty', event: 'DISCARD', to: 'clean' }), 'arrows: from, event, to');
+      [ [ 'saving', 'SAVING' ], [ 'loadingData', 'LOADING_DATA' ], [ 'loading data', 'LOADING_DATA' ], [ '2fa', 'S_2FA' ], [ 'é', 'STATE' ] ].forEach(function(c) {
+        x.test(codec.upperSnake(c[0]) === c[1], 'upperSnake(' + c[0] + ') is ' + c[1] + ' (got ' + codec.upperSnake(c[0]) + ')');
+      });
+
+      // ---- checks ---------------------------------------------------------
+      x.test(codec.check(save()).length === 0, 'check: the Save button has no problems');
+      var chk = function(text) { return codec.check(codec.parse(text).machine); };
+      x.test(has(chk('{"states":{"a":{"type":"final"}}}'), 'no-initial', 'No initial state.', true), 'check: no initial state');
+      x.test(has(chk('{"initial":"x","states":{"a":{"type":"final"}}}'), 'unknown-initial', 'Initial state "x" does not exist.', true), 'check: unknown initial');
+      x.test(has(chk('{"initial":"a","states":{"a":{"on":{"GO":"zz"}}}}'), 'unknown-target', 'a on GO goes to "zz", which does not exist.', true), 'check: unknown target');
+      x.test(has(chk('{"initial":"a","states":{"a":{"on":{"X":"A"}},"A":{"type":"final"}}}'), 'case-clash', 'States "a" and "A" differ only by case.', true), 'check: states differ only by case');
+      x.test(has(chk('{"initial":"loadingData","states":{"loadingData":{"on":{"X":"loading_data"}},"loading_data":{"type":"final"}}}'), 'case-clash', 'States "loadingData" and "loading_data" differ only by case.', true), 'check: states that give the same foam.FSM name clash');
+      x.test(has(chk('{"initial":"a","states":{"a":{"type":"final"},"b":{"type":"final"}}}'), 'unreachable', '"b" can never be reached from the initial state.', false), 'check: unreachable state');
+      x.test(has(chk('{"initial":"a","states":{"a":{"on":{"GO":"b"}},"b":{}}}'), 'dead-end', '"b" has no way out and is not marked final.', false), 'check: dead end');
+      x.test(has(chk('{"initial":"a","states":{"a":{"on":{"GO":"b"}},"b":{"on":{"go":"a"}}}}'), 'event-case-clash', 'Events "GO" and "go" differ only by case.', false), 'check: events differ only by case');
+      x.test(chk('{"initial":"a","states":{"a":{"on":{"GO":"zz"}}}}').every(function(c) { return c.kind !== 'dead-end' || c.state !== 'a'; }), 'check: a state with an arrow is not a dead end, even a broken arrow');
+
+      // ---- Mermaid --------------------------------------------------------
+      var expected = [
+        'stateDiagram-v2',
+        '  [*] --> clean',
+        '  clean --> dirty : EDIT',
+        '  dirty --> saving : SAVE',
+        '  dirty --> clean : DISCARD',
+        '  saving --> clean : SUCCESS',
+        '  saving --> error : FAIL',
+        '  error --> saving : RETRY'
+      ].join('\n') + '\n';
+      x.test(codec.toMermaid(save()) === expected, 'toMermaid: exact text for the Save button');
+      var odd = codec.toMermaid(codec.parse('{"initial":"loading data","states":{"loading data":{"type":"final"}}}').machine);
+      x.test(odd.indexOf('state "loading data" as s0') >= 0 && odd.indexOf('[*] --> s0') >= 0 && odd.indexOf('s0 --> [*]') >= 0, 'toMermaid: a name with a space is declared with an id');
+
+      // ---- ops ------------------------------------------------------------
+      var m = save(), before = codec.stringify(m);
+      var r = ops.renameState(m, 'dirty', 'clean');
+      x.test(r.error === 'A state named "clean" already exists.' && same(r.machine, m), 'renameState refuses an existing name and returns the machine unchanged');
+      x.test(ops.renameState(m, 'dirty', '').error !== '', 'renameState refuses an empty name');
+      r = ops.renameState(m, 'saving', 'busy');
+      x.test(r.error === '' && r.machine.states.dirty.on.SAVE === 'busy' && r.machine.states.error.on.RETRY === 'busy' && r.machine.states.busy && ! r.machine.states.saving, 'renameState rewrites every target');
+      x.test(ops.renameState(m, 'clean', 'start').machine.initial === 'start', 'renameState rewrites initial');
+      x.test(codec.stringify(m) === before, 'ops never change their input');
+
+      r = ops.deleteState(m, 'clean');
+      x.test(! r.machine.states.clean && ! r.machine.states.dirty.on.DISCARD && ! r.machine.states.saving.on.SUCCESS && r.machine.initial === undefined, 'deleteState drops the state, arrows into it and initial');
+      x.test(has(codec.check(r.machine), 'no-initial', 'No initial state.', true), 'after deleting the initial state, check reports no initial');
+
+      r = ops.addState(codec.parse('{"states":{}}').machine);
+      x.test(r.machine.states.state1 && r.machine.initial === 'state1', 'addState: the first state is state1 and becomes initial');
+      r = ops.addState(r.machine);
+      x.test(r.machine.states.state2 && r.machine.initial === 'state1', 'addState: the next free name is state2');
+      x.test(ops.addState(m, 'dirty').error === 'A state named "dirty" already exists.', 'addState refuses an existing name');
+
+      x.test(ops.setInitial(m, 'error').machine.initial === 'error', 'setInitial');
+      r = ops.setFinal(m, 'error', true);
+      x.test(r.machine.states.error.type === 'final' && r.machine.states.error.on === undefined, 'setFinal(true) marks final and drops on');
+      x.test(ops.setFinal(r.machine, 'error', false).machine.states.error.type === undefined, 'setFinal(false) drops type');
+
+      x.test(ops.addArrow(m, 'clean', 'EDIT', 'error').error === 'clean already handles EDIT.', 'addArrow refuses a duplicate event in that state');
+      x.test(ops.addArrow(m, 'clean', undefined, 'error').machine.states.clean.on.EVENT1 === 'error', 'addArrow: the default event is EVENT1');
+      r = ops.renameEvent(m, 'dirty', 'SAVE', 'STORE');
+      x.test(r.machine.states.dirty.on.STORE === 'saving' && r.machine.states.dirty.on.SAVE === undefined, 'renameEvent');
+      x.test(ops.renameEvent(m, 'dirty', 'SAVE', 'DISCARD').error === 'dirty already handles DISCARD.', 'renameEvent refuses a duplicate');
+      x.test(ops.retarget(m, 'dirty', 'SAVE', 'error').machine.states.dirty.on.SAVE === 'error', 'retarget');
+      x.test(ops.deleteArrow(m, 'dirty', 'SAVE').machine.states.dirty.on.SAVE === undefined, 'deleteArrow');
+
+      var layout = { clean: { x: 1, y: 2 }, dirty: { x: 3, y: 4 } };
+      x.test(same(ops.renameLayoutKey(layout, 'clean', 'start'), { start: { x: 1, y: 2 }, dirty: { x: 3, y: 4 } }) && layout.clean, 'renameLayoutKey returns a new map');
+      x.test(same(ops.dropLayoutKey(layout, 'clean'), { dirty: { x: 3, y: 4 } }) && layout.clean, 'dropLayoutKey returns a new map');
+    }
+  ]
+});
