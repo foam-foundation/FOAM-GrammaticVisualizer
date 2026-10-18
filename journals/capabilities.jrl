@@ -1,0 +1,11 @@
+// Service provider for this application's spid. Anonymous (not logged in)
+// requests run as its anonymousUser, see users.jrl.
+p({
+  "class":"foam.core.auth.ServiceProvider",
+  "id":"grammaticVisualizer",
+  "name":"GrammaticVisualizer",
+  "description":"GrammaticVisualizer service provider",
+  "enabled":true,
+  "anonymousUser":43,
+  "permissionsGranted":["language.read.en-"]
+})
