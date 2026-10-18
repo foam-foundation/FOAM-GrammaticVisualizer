@@ -157,6 +157,8 @@ foam.CLASS({
 
       var src = codec.toFoamFSMSource(save(), pkg, 'SaveSrc' + n);
       x.test(src.indexOf('foam.FSM({') === 0, 'toFoamFSMSource starts with foam.FSM({');
+      var finalSrc = codec.toFoamFSMSource({ initial: 'a', states: { a: { on: { GO: 'b' } }, b: { type: 'final' } } }, pkg, 'FinalSrc' + n);
+      x.test(finalSrc.indexOf("transitions: [] }") >= 0, 'toFoamFSMSource writes an empty list as []: ' + finalSrc.split('\n')[5]);
       eval(src);
       var Src = foam.lookup(pkg + '.SaveSrc' + n, true);
       x.test(Src && Src.CLEAN.on.EDIT === 'DIRTY', 'toFoamFSMSource evaluates to a working class: ' + src.split('\n').slice(0, 4).join(' '));

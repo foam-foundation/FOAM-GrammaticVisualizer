@@ -72,6 +72,11 @@ foam.CLASS({
       x.test(keys.length === 4 && distinct === 4, 'autoLayout places all 4 states at distinct points');
       x.test(JSON.stringify(v.autoLayout(save, { clean: { x: 500, y: 500 } }).clean) === JSON.stringify({ x: 500, y: 500 }), 'autoLayout keeps a stored position');
 
+      // A new state must not land on a saved one that sits off the grid.
+      var placed = v.autoLayout({ initial: 'a', states: { a: { on: { GO: 'b', X: 'c' } }, b: {}, c: {} } }, { a: { x: 40, y: 60 }, b: { x: 260, y: 60 } });
+      var overlaps = function(p, q) { return Math.abs(p.x - q.x) < v.BOX_W && Math.abs(p.y - q.y) < v.BOX_H; };
+      x.test(! overlaps(placed.c, placed.a) && ! overlaps(placed.c, placed.b), 'autoLayout never overlaps a new state with a saved one off the grid: ' + JSON.stringify(placed));
+
       click(stateEl('clean'));
       x.test(v.selection && v.selection.kind === 'state' && v.selection.state === 'clean', 'clicking a state selects it');
       await until(function() { return stateEl('clean') && stateEl('clean').classList.contains('selected'); });

@@ -36,7 +36,7 @@ foam.CLASS({
     ^ .state .box { fill: $backgroundSecondary; stroke: $borderStrong; stroke-width: 1.5; }
     ^ .state .name { fill: $textDefault; font-size: 1.4rem; text-anchor: middle; dominant-baseline: central; }
     ^ .state .ring { fill: none; stroke: $borderStrong; stroke-width: 1; }
-    ^ .state.current .box { fill: $primary50; stroke: $primary500; stroke-width: 3.5; }
+    ^ .state.current .box { fill: $backgroundTertiary; stroke: $primary500; stroke-width: 3.5; }
     ^ .state.current .name { font-weight: $font-bold; }
     ^ .state.selected .box { stroke: $primary400; stroke-width: 2.5; stroke-dasharray: 6 3; }
     ^ .state.current.selected .box { stroke-width: 3.5; }
@@ -101,15 +101,18 @@ foam.CLASS({
       var maxDepth = order.reduce(function(m, n) { return Math.max(m, depth[n]); }, -1);
       names.forEach(function(n) { if ( depth[n] === undefined ) { depth[n] = maxDepth + 1; order.push(n); } });
 
-      var taken = {}, key = function(p) { return p.x + ',' + p.y; };
-      Object.keys(out).forEach(function(k) { taken[key(out[k])] = true; });
+      // A spot is free when no placed box overlaps it, so saved positions off the grid count too.
+      var self = this, placed = Object.keys(out).map(function(k) { return out[k]; });
+      var free = function(p) {
+        return placed.every(function(q) { return Math.abs(p.x - q.x) >= self.BOX_W + 20 || Math.abs(p.y - q.y) >= self.BOX_H + 20; });
+      };
       var rows = {};
       order.forEach(function(n) {
         if ( out[n] ) return;
         var col = depth[n], row = rows[col] || 0, p;
-        do { p = { x: this.ORIGIN + col * this.COL_GAP, y: this.ORIGIN + row * this.ROW_GAP }; row++; } while ( taken[key(p)] );
+        do { p = { x: this.ORIGIN + col * this.COL_GAP, y: this.ORIGIN + row * this.ROW_GAP }; row++; } while ( ! free(p) );
         rows[col] = row;
-        taken[key(p)] = true;
+        placed.push(p);
         out[n] = p;
       }, this);
       return out;

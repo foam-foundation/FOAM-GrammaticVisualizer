@@ -67,7 +67,7 @@ foam.CLASS({
   ],
 
   css: `
-    ^ { display: grid; grid-template-columns: minmax(28rem, 38rem) minmax(0, 1fr); gap: $space-4;
+    ^ { display: grid; grid-template-columns: minmax(40rem, 46rem) minmax(0, 1fr); gap: $space-4;
         height: 100%; min-height: 0; padding: $space-4; box-sizing: border-box; }
     ^side { display: flex; flex-direction: column; gap: $space-3; min-height: 0; overflow: auto; }
     ^main { display: flex; flex-direction: column; gap: $space-3; min-width: 0; min-height: 0; }
@@ -84,6 +84,8 @@ foam.CLASS({
     ^step { padding: $space-1 0; border-bottom: 1px solid $borderLight; }
     ^section { display: flex; flex-direction: column; gap: $space-2; padding-top: $space-2; }
     ^ textarea { width: 100%; box-sizing: border-box; }
+    /* Five tabs: SegmentedTabs gives each at least 100px, which cuts the last ones off here. */
+    ^ .foam-u2-SegmentedTabs-tabRow { grid-auto-columns: minmax(0, 1fr); }
   `,
 
   properties: [

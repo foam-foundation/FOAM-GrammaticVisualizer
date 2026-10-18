@@ -170,7 +170,7 @@ foam.CLASS({
     function toFoamFSMSource(machine, pkg, name) {
       /** toFoamFSMSpec as readable code: one line per value, single quotes. */
       var js = function(v) {
-        if ( Array.isArray(v) ) return '[ ' + v.map(js).join(', ') + ' ]';
+        if ( Array.isArray(v) ) return v.length ? '[ ' + v.map(js).join(', ') + ' ]' : '[]';
         if ( v && typeof v === 'object' ) {
           var ks = Object.keys(v);
           return ks.length ? '{ ' + ks.map(function(k) { return ( /^[A-Za-z_$][\w$]*$/.test(k) ? k : js(k) ) + ': ' + js(v[k]); }).join(', ') + ' }' : '{}';

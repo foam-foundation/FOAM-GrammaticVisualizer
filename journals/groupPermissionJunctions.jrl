@@ -68,6 +68,15 @@ p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer"
 // Grammar Visualizer screen
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.grammar"})
 
+// State Machines screen (machineDAO)
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"menu.read.grammaticVisualizer.stateMachines"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.machineDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"service.read.machineDAO"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"machine.create"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"machine.read.*"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"machine.update.*"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"grammaticVisualizer",targetId:"machine.delete.*"})
+
 // Flows (and any other ServiceProviderAware rows) with no spid of their own need
 // serviceprovider.read.* to be visible; foam3's 176 shipped flows carry none
 // (ServiceProviderAwareSupport.js:315). The remaining ones carry spid "foam".
