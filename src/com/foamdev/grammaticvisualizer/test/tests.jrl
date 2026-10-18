@@ -2,3 +2,4 @@ p({"class":"com.foamdev.grammaticvisualizer.test.SentenceTest","id":"SentenceTes
 p({"class":"com.foamdev.grammaticvisualizer.test.ThemeDetailViewTest","id":"ThemeDetailViewTest","description":"Theme detail view: swatches, token overrides, bounded images, input sample"})
 p({"class":"com.foamdev.grammaticvisualizer.test.FSMEventsTest","id":"FSMEventsTest","description":"foam.FSM events refinement: on map per state and send<Name>(event)"})
 p({"class":"com.foamdev.grammaticvisualizer.test.MachineCodecTest","id":"MachineCodecTest","description":"State machine studio: JSON codec, checks, Mermaid, foam.FSM export/import and edit operations"})
+p({"class":"com.foamdev.grammaticvisualizer.test.MachineRunnerTest","id":"MachineRunnerTest","description":"State machine studio: step a machine on a runtime foam.FSM class"})
