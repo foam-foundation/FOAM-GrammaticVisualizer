@@ -138,6 +138,85 @@ foam.CLASS({
       return out;
     },
 
+    // ---- foam.FSM ---------------------------------------------------------
+
+    function toFoamFSMSpec(machine, pkg, name) {
+      /**
+       * The object to pass to foam.FSM(). A value's name is the UPPER_SNAKE of the
+       * state name and its label the state name itself, so fromFoamFSM restores it.
+       * Needs the app's events refinement (FSMEvents.js) for on.
+       */
+      var self = this, names = this.stateNames(machine);
+      var vname = function(n) { return names.indexOf(n) >= 0 ? self.upperSnake(n) : n; };
+      return {
+        package: pkg,
+        name: name,
+        documentation: machine.description || '',
+        values: names.map(function(n) {
+          var v = { name: self.upperSnake(n), label: n }, on = self.on_(machine, n), targets = [], evs = {};
+          if ( machine.initial === n ) v.isInitial = true;
+          Object.keys(on).forEach(function(e) {
+            var t = vname(on[e]);
+            evs[e] = t;
+            if ( targets.indexOf(t) < 0 ) targets.push(t);
+          });
+          v.transitions = targets;
+          if ( Object.keys(evs).length ) v.on = evs;
+          return v;
+        })
+      };
+    },
+
+    function toFoamFSMSource(machine, pkg, name) {
+      /** toFoamFSMSpec as readable code: one line per value, single quotes. */
+      var js = function(v) {
+        if ( Array.isArray(v) ) return '[ ' + v.map(js).join(', ') + ' ]';
+        if ( v && typeof v === 'object' ) {
+          var ks = Object.keys(v);
+          return ks.length ? '{ ' + ks.map(function(k) { return ( /^[A-Za-z_$][\w$]*$/.test(k) ? k : js(k) ) + ': ' + js(v[k]); }).join(', ') + ' }' : '{}';
+        }
+        if ( typeof v === 'string' ) return "'" + v.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n') + "'";
+        return String(v);
+      };
+      var spec = this.toFoamFSMSpec(machine, pkg, name), out = [ 'foam.FSM({' ];
+      out.push('  package: ' + js(spec.package) + ',');
+      out.push('  name: ' + js(spec.name) + ',');
+      if ( spec.documentation ) out.push('  documentation: ' + js(spec.documentation) + ',');
+      out.push('  values: [');
+      spec.values.forEach(function(v, i) { out.push('    ' + js(v) + ( i < spec.values.length - 1 ? ',' : '' )); });
+      out.push('  ]');
+      out.push('});');
+      return out.join('\n') + '\n';
+    },
+
+    function fromFoamFSM(cls) {
+      /**
+       * A machine from a foam.FSM class, and notes on what did not carry over.
+       * State name: the value's label, else its name. A transition with no event
+       * in on gets the event TO_<TARGET>. A state with no transitions is final.
+       */
+      var values = cls.VALUES, notes = [], byName = {}, states = {}, finals = 0;
+      values.forEach(function(v) { byName[v.name] = v.label || v.name; });
+      var sname = function(t) { return byName[t] || t; };
+      values.forEach(function(v) {
+        var s = {}, on = {}, covered = [], ev = v.on || {};
+        Object.keys(ev).forEach(function(e) { on[e] = sname(ev[e]); covered.push(ev[e]); });
+        v.transitions.forEach(function(t) { if ( covered.indexOf(t) < 0 ) on['TO_' + t] = sname(t); });
+        if ( v.transitions.length === 0 ) { s.type = 'final'; finals++; }
+        else s.on = on;
+        states[byName[v.name]] = s;
+      });
+      var machine = { id: cls.model_.name.charAt(0).toLowerCase() + cls.model_.name.slice(1) };
+      if ( cls.model_.documentation ) machine.description = cls.model_.documentation;
+      var initials = values.filter(function(v) { return v.isInitial; });
+      if ( initials.length ) machine.initial = byName[initials[0].name];
+      if ( initials.length > 1 ) notes.push('More than one initial state; using "' + machine.initial + '".');
+      if ( initials.length === 0 ) notes.push('No initial state.');
+      machine.states = states;
+      if ( finals ) notes.push(finals + ' states with no way out are marked final.');
+      return { machine: machine, notes: notes };
+    },
+
     // ---- Mermaid ----------------------------------------------------------
 
     function toMermaid(machine) {

@@ -141,6 +141,59 @@ foam.CLASS({
       var layout = { clean: { x: 1, y: 2 }, dirty: { x: 3, y: 4 } };
       x.test(same(ops.renameLayoutKey(layout, 'clean', 'start'), { start: { x: 1, y: 2 }, dirty: { x: 3, y: 4 } }) && layout.clean, 'renameLayoutKey returns a new map');
       x.test(same(ops.dropLayoutKey(layout, 'clean'), { dirty: { x: 3, y: 4 } }) && layout.clean, 'dropLayoutKey returns a new map');
+
+      this.testFoamFSM(x, codec, save, same);
+    },
+
+    function testFoamFSM(x, codec, save, same) {
+      // Class names are fresh per run so a second run in the same page does not redefine a class.
+      var pkg = 'com.foamdev.grammaticvisualizer.test.gen', n = Date.now();
+      var withoutId = function(m) { var c = JSON.parse(JSON.stringify(m)); delete c.id; return c; };
+
+      var spec = codec.toFoamFSMSpec(save(), pkg, 'SaveSpec' + n);
+      x.test(same(spec.values[1], { name: 'DIRTY', label: 'dirty', transitions: [ 'SAVING', 'CLEAN' ], on: { SAVE: 'SAVING', DISCARD: 'CLEAN' } }), 'toFoamFSMSpec: a state becomes a value with name, label, transitions and on');
+      x.test(spec.values[0].isInitial === true && spec.values[1].isInitial === undefined, 'toFoamFSMSpec: only the initial state has isInitial');
+      x.test(spec.package === pkg && spec.name === 'SaveSpec' + n, 'toFoamFSMSpec: package and name');
+
+      var src = codec.toFoamFSMSource(save(), pkg, 'SaveSrc' + n);
+      x.test(src.indexOf('foam.FSM({') === 0, 'toFoamFSMSource starts with foam.FSM({');
+      eval(src);
+      var Src = foam.lookup(pkg + '.SaveSrc' + n, true);
+      x.test(Src && Src.CLEAN.on.EDIT === 'DIRTY', 'toFoamFSMSource evaluates to a working class: ' + src.split('\n').slice(0, 4).join(' '));
+
+      foam.FSM(codec.toFoamFSMSpec(save(), pkg, 'SaveTrip' + n));
+      var back = codec.fromFoamFSM(foam.lookup(pkg + '.SaveTrip' + n));
+      x.test(same(withoutId(back.machine), withoutId(save())) && back.notes.length === 0, 'round trip: JSON to foam.FSM and back gives the same machine: ' + codec.stringify(back.machine));
+      x.test(back.machine.id === 'saveTrip' + n, 'fromFoamFSM: id is the class name with a lowercase first letter');
+
+      var oddText = '{"initial":"loading data","states":{"loading data":{"on":{"GO":"2fa"}},"2fa":{"type":"final"}}}';
+      var odd = JSON.parse(oddText), built = true;
+      try { foam.FSM(codec.toFoamFSMSpec(odd, pkg, 'Odd' + n)); } catch (e) { built = false; }
+      x.test(built, 'a state name that is not an identifier still builds a foam.FSM class');
+      var oddBack = built && codec.fromFoamFSM(foam.lookup(pkg + '.Odd' + n)).machine;
+      x.test(oddBack && oddBack.initial === 'loading data' && oddBack.states['2fa'] && oddBack.states['loading data'].on.GO === '2fa', 'round trip keeps the names "loading data" and "2fa"');
+
+      var t = codec.fromFoamFSM(foam.lang.test.TestStateMachine);
+      x.test(t.machine.initial === 'New', 'fromFoamFSM(TestStateMachine): initial is the label New');
+      x.test(t.machine.states.New.on.TO_ACTIVE === 'Active', 'fromFoamFSM: an arrow with no on event is named TO_<TARGET>');
+      x.test(t.machine.states.Done.type === 'final', 'fromFoamFSM: a state with no transitions is final');
+      x.test(t.notes.indexOf('1 states with no way out are marked final.') >= 0, 'fromFoamFSM: a note counts the states marked final: ' + t.notes.join(' | '));
+
+      var two = codec.fromFoamFSM(foam.lookup(pkg + '.SaveSrc' + n)); // one initial: no note
+      x.test(two.notes.length === 0, 'fromFoamFSM: no notes for a clean class');
+      foam.FSM({ package: pkg, name: 'TwoStarts' + n, values: [ { name: 'A', isInitial: true, transitions: [ 'B' ] }, { name: 'B', isInitial: true, transitions: [ 'A' ] } ] });
+      x.test(codec.fromFoamFSM(foam.lookup(pkg + '.TwoStarts' + n)).notes.indexOf('More than one initial state; using "A".') >= 0, 'fromFoamFSM: more than one initial state is noted');
+      foam.FSM({ package: pkg, name: 'NoStart' + n, values: [ { name: 'A', transitions: [ 'B' ] }, { name: 'B', transitions: [ 'A' ] } ] });
+      x.test(codec.fromFoamFSM(foam.lookup(pkg + '.NoStart' + n)).notes.indexOf('No initial state.') >= 0, 'fromFoamFSM: no initial state is noted');
+
+      var ex = 'com.foamdev.grammaticvisualizer.fsm.examples.';
+      [ 'SaveButton', 'LoginForm' ].forEach(function(name) {
+        var r = codec.fromFoamFSM(foam.lookup(ex + name));
+        x.test(codec.check(r.machine).length === 0, 'example ' + name + ' opens as a machine with no problems: ' + JSON.stringify(codec.check(r.machine)));
+      });
+      x.test(same(withoutId(codec.fromFoamFSM(foam.lookup(ex + 'SaveButton')).machine), withoutId(save())), 'the SaveButton example is the Save button machine');
+      var login = codec.fromFoamFSM(foam.lookup(ex + 'LoginForm')).machine;
+      x.test(login.initial === 'start' && login.states.loading.on.REJECT === 'error' && login.states.success.type === 'final', 'the LoginForm example: start, loading, error, success');
     }
   ]
 });
