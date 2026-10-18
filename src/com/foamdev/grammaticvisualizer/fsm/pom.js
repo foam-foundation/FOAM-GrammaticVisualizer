@@ -6,6 +6,9 @@ foam.POM({
     { name: 'MachineOps',                     flags: 'js' },
     { name: 'MachineRunner',                  flags: 'js' },
     { name: 'MachineCanvas',                  flags: 'web' },
+    { name: 'Machine',                        flags: 'js|java' },
+    { name: 'MachineStepRow',                 flags: 'web' },
+    { name: 'StateMachineStudioView',         flags: 'web' },
     { name: 'examples/SaveButton',            flags: 'js' },
     { name: 'examples/LoginForm',             flags: 'js' }
   ]

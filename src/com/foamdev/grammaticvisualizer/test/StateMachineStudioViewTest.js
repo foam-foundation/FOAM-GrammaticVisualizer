@@ -1,0 +1,137 @@
+/**
+ * @license
+ * Copyright 2026 The FOAM Authors. All Rights Reserved.
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+foam.CLASS({
+  package: 'com.foamdev.grammaticvisualizer.test',
+  name: 'StateMachineStudioViewTest',
+  extends: 'foam.core.test.JSTest',
+
+  requires: [
+    'com.foamdev.grammaticvisualizer.fsm.Machine',
+    'com.foamdev.grammaticvisualizer.fsm.StateMachineStudioView',
+    'foam.dao.MDAO',
+    'foam.u2.ControllerMode'
+  ],
+
+  documentation: `
+    The state machine studio screen: loads a machine from machineDAO, keeps the
+    JSON and the canvas in sync both ways, steps it, lists checks, shows the
+    foam.FSM and Mermaid code, saves, and uses only foam views for controls.
+  `,
+
+  methods: [
+    async function runTest(x) {
+      // A throw inside the body would lose every result already recorded; report it as one failure instead.
+      try { await this.runTest_(x); }
+      catch (e) { x.test(false, 'test body threw: ' + (e && e.stack || e)); }
+    },
+
+    async function runTest_(x) {
+      var wait  = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };
+      var until = async function(fn, ms) {
+        for ( var t = 0 ; t < ( ms || 4000 ) ; t += 50 ) { if ( await fn() ) return true; await wait(50); }
+        return false;
+      };
+      var saveJSON = JSON.stringify({
+        id: 'saveButton', initial: 'clean',
+        states: {
+          clean:  { on: { EDIT: 'dirty' } },
+          dirty:  { on: { SAVE: 'saving', DISCARD: 'clean' } },
+          saving: { on: { SUCCESS: 'clean', FAIL: 'error' } },
+          error:  { on: { RETRY: 'saving' } }
+        }
+      }, null, 2);
+
+      var dao = this.MDAO.create({ of: this.Machine }, x);
+      await dao.put(this.Machine.create({ id: 1, name: 'Save button', description: 'A Save button', definition: saveJSON, layout: '' }, x));
+      var stubs = { auth: { check: async function() { return true; } }, ctrl: { notify: function() {}, pub: function() {}, sub: function() {}, add: function() { return this; } } };
+      var y = x.createSubContext(Object.assign({ machineDAO: dao, controllerMode: this.ControllerMode.EDIT }, stubs));
+
+      var v = this.StateMachineStudioView.create({}, y);
+      v.write();
+      var root = v.element_;
+      var qa = function(sel) { return Array.from(root.querySelectorAll(sel)); };
+      var states = function() { return qa('g.state').length; };
+      var text = function() { return root.textContent; };
+
+      x.test(await until(function() { return states() === 4; }), 'the first machine in machineDAO loads: 4 states on the canvas (got ' + states() + ')');
+      x.test(v.foamSource.indexOf("on: { EDIT: 'DIRTY' }") >= 0, 'the foam.FSM code shows the on map');
+      x.test(v.mermaid.indexOf('stateDiagram-v2') === 0, 'the Mermaid code is a state diagram');
+
+      // JSON -> canvas
+      var m = JSON.parse(saveJSON);
+      m.states.extra = { type: 'final' };
+      v.definitionText = JSON.stringify(m, null, 2);
+      x.test(await until(function() { return states() === 5; }), 'editing the JSON adds a state on the canvas');
+
+      // Broken JSON keeps the last good machine.
+      var threw = false;
+      try { v.definitionText = '{'; } catch (e) { threw = true; }
+      await wait(150);
+      x.test(! threw && states() === 5 && v.parseError !== '', 'invalid JSON: no throw, canvas keeps 5 states, error shown: ' + v.parseError);
+      v.definitionText = '{"states":5}';
+      await wait(150);
+      x.test(states() === 5 && v.parseError === '"states" must be an object', 'JSON that is not a machine: canvas unchanged');
+      v.definitionText = JSON.stringify(m, null, 2);
+      await until(function() { return v.parseError === ''; });
+
+      // canvas -> JSON: rename a state through the inspector.
+      v.selection = { kind: 'state', state: 'clean' };
+      await until(function() { return v.stateName === 'clean'; });
+      x.test(v.stateName === 'clean', 'selecting a state fills the inspector name');
+      v.stateName = 'start';
+      x.test(await until(function() { return v.definitionText.indexOf('"start"') >= 0 && v.definitionText.indexOf('"initial": "start"') >= 0; }), 'renaming in the inspector rewrites the JSON, initial included');
+      x.test(v.selection && v.selection.state === 'start', 'the selection follows the rename');
+
+      var beforeText = v.definitionText;
+      v.stateName = 'dirty';
+      await wait(100);
+      x.test(v.definitionText === beforeText && v.opError === 'A state named "dirty" already exists.', 'a rename to an existing name is refused and shown: ' + v.opError);
+
+      // Stepping
+      var stepBtn = function(ev) {
+        return qa('.foam-u2-ActionView').filter(function(b) { return b.closest('[data-step-row]') && b.textContent.trim() === ev; })[0];
+      };
+      await until(function() { return !! stepBtn('EDIT'); });
+      x.test(stepBtn('EDIT') && ! stepBtn('EDIT').disabled, 'Step row: EDIT is enabled at the initial state');
+      x.test(stepBtn('SAVE') && stepBtn('SAVE').disabled, 'Step row: SAVE is disabled at the initial state');
+      stepBtn('EDIT').click();
+      x.test(await until(function() { return v.runner.current === 'dirty'; }), 'clicking EDIT steps to dirty');
+      x.test(await until(function() { return stepBtn('SAVE') && ! stepBtn('SAVE').disabled; }), 'after EDIT, SAVE is enabled');
+      x.test(await until(function() { return qa('[data-step-history] .step').length === 1; }), 'the Steps tab lists one step');
+      x.test(await until(function() { return qa('g.state.current[data-state="dirty"]').length === 1; }), 'the canvas marks dirty as current');
+
+      // Checks
+      v.selection = { kind: 'state', state: 'start' };
+      await until(function() { return v.stateName === 'start'; });
+      v.deleteState();
+      x.test(await until(function() { return /Checks \(\d+\)/.test(text()) && ! /Checks \(0\)/.test(text()); }), 'deleting the initial state: the Checks tab counts problems');
+      var checksTab = qa('.foam-u2-SegmentedTabs-tabRow > *').filter(function(e) { return /Checks/.test(e.textContent); })[0];
+      checksTab && checksTab.click();
+      x.test(await until(function() { return text().indexOf('No initial state.') >= 0; }), 'opening the Checks tab lists "No initial state."');
+
+      // Save
+      v.name = 'Save button 2';
+      v.saveMachine();
+      var stored = null;
+      await until(async function() { stored = await dao.find(1); return stored && stored.name === 'Save button 2'; });
+      x.test(stored && stored.name === 'Save button 2' && stored.definition === v.definitionText, 'saveMachine stores the name and JSON');
+      x.test(stored && JSON.parse(stored.layout || '{}').dirty, 'saveMachine stores the canvas positions');
+
+      // Only foam views for controls.
+      var raw = qa('button, input, select, textarea').filter(function(e) {
+        if ( e.type === 'file' ) return false; // FileUploadTextField's hidden input
+        for ( var n = e, i = 0 ; n && i < 3 ; n = n.parentElement, i++ ) {
+          if ( Array.from(n.classList || []).some(function(c) { return c.indexOf('foam-u2-') === 0; }) ) return false;
+        }
+        return true;
+      });
+      x.test(raw.length === 0, 'no raw controls outside foam views (' + raw.map(function(e) { return e.tagName; }).join(',') + ')');
+
+      v.remove && v.remove();
+    }
+  ]
+});
