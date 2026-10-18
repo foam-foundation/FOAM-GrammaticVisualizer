@@ -59,6 +59,10 @@ foam.CLASS({
       var b = H.create({ status: F.BROKEN }, x);
       msg = await rejects(b.sendStatus('GO'));
       x.test(msg.indexOf('not in transitions of BROKEN') >= 0, 'an on target missing from transitions fails: ' + msg);
+
+      // Names every object inherits are not events.
+      msg = await rejects(h.sendStatus('constructor'));
+      x.test(msg.indexOf('"constructor" is not handled in state DIRTY') >= 0, 'an inherited name like constructor is not handled: ' + msg);
     }
   ]
 });

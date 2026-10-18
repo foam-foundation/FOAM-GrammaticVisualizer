@@ -9,11 +9,13 @@ foam.CLASS({
   name: 'MachineRunner',
 
   documentation: `
-    Steps a machine on the real thing: every start() defines a fresh foam.FSM
-    class from the machine (MachineCodec.toFoamFSMSpec) and a holder class with a
-    StateMachine property, then each send(event) goes through the app's
-    sendStatus(event) refinement, so foam3's own transition checks run.
-    Setting machine restarts.
+    Steps a machine on the real thing: the first send(event) after a start
+    defines a foam.FSM class from the machine (MachineCodec.toFoamFSMSpec) and a
+    holder class with a StateMachine property, then each send goes through the
+    app's sendStatus(event) refinement, so foam3's own transition checks run.
+    Setting machine restarts. Classes are built only to step, since typing in
+    the JSON sets a new machine on every key, and the same machine reuses its
+    classes: the registry keeps every class it has seen.
   `,
 
   requires: [ 'com.foamdev.grammaticvisualizer.fsm.MachineCodec' ],
@@ -84,36 +86,48 @@ foam.CLASS({
       var blocking = this.codec.check(m).filter(function(c) { return c.blocking; });
       if ( blocking.length ) { this.current = ''; this.error = blocking[0].message; return; }
 
-      // Class ids are never reused: the registry keeps every class it has seen.
-      var cls = this.cls_, n = cls.runCount_ = ( cls.runCount_ || 0 ) + 1;
-      var fsmId = this.RUN_PACKAGE + '.Machine' + n;
+      this.current = m.initial;
+      this.error   = '';
+    },
+
+    function holder() {
+      /** The holder to step, built on first use; null (with error set) when the classes cannot be built. */
+      if ( this.holder_ ) return this.holder_;
+      var m = this.machine, cls = this.cls_;
+      var key = JSON.stringify(this.codec.toFoamFSMSpec(m, '', ''));
+      cls.classCache_ = cls.classCache_ || {};
       try {
-        foam.FSM(this.codec.toFoamFSMSpec(m, this.RUN_PACKAGE, 'Machine' + n));
-        foam.CLASS({
-          package: this.RUN_PACKAGE,
-          name: 'Holder' + n,
-          properties: [ { class: 'StateMachine', of: fsmId, name: 'status' } ]
-        });
-        var F = foam.lookup(fsmId), H = foam.lookup(this.RUN_PACKAGE + '.Holder' + n);
+        var n = cls.classCache_[key];
+        if ( ! n ) {
+          // Class ids are never reused: the registry keeps every class it has seen.
+          n = cls.runCount_ = ( cls.runCount_ || 0 ) + 1;
+          foam.FSM(this.codec.toFoamFSMSpec(m, this.RUN_PACKAGE, 'Machine' + n));
+          foam.CLASS({
+            package: this.RUN_PACKAGE,
+            name: 'Holder' + n,
+            properties: [ { class: 'StateMachine', of: this.RUN_PACKAGE + '.Machine' + n, name: 'status' } ]
+          });
+          cls.classCache_[key] = n;
+        }
+        var F = foam.lookup(this.RUN_PACKAGE + '.Machine' + n), H = foam.lookup(this.RUN_PACKAGE + '.Holder' + n);
         this.holder_ = H.create({ status: F[this.codec.valueNames(m)[m.initial]] }, this);
       } catch (e) {
         // Never leave the screen half-updated: show why it cannot run instead.
         this.holder_ = null; this.current = ''; this.error = e.message;
-        return;
       }
-      this.current = m.initial;
-      this.error   = '';
+      return this.holder_;
     },
 
     function handles(event) {
       if ( this.busy || this.finished || ! this.current ) return false;
       var s = this.machine.states[this.current];
-      return !! ( s && s.on && s.on[event] !== undefined );
+      return !! ( s && s.on && Object.prototype.hasOwnProperty.call(s.on, event) );
     },
 
     async function send(event) {
-      if ( ! this.holder_ ) return;
-      var token = this.runToken_, holder = this.holder_, from = this.current;
+      if ( ! this.current ) return;
+      var token = this.runToken_, holder = this.holder(), from = this.current;
+      if ( ! holder ) return;
       this.busy = true;
       try {
         await holder.sendStatus(event);

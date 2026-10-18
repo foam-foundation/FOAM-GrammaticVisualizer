@@ -25,7 +25,10 @@ foam.CLASS({
     COL_GAP: 200,
     ROW_GAP: 120,
     ORIGIN: 40,
-    DRAG_SLOP: 3
+    DRAG_SLOP: 3,
+    // Arrow labels are 1.2rem: about 8px a character, 16px a line.
+    LABEL_CHAR_W: 8,
+    LABEL_H: 16
   },
 
   css: `
@@ -86,20 +89,22 @@ foam.CLASS({
        * Keeps every stored position; places the rest in columns by distance from the
        * initial state (unreachable states in one more column), skipping taken spots.
        */
-      var out = {}, names = this.codec.stateNames(machine), depth = {}, order = [];
+      // Own keys only (has): a state may be named like an inherited key, such as constructor.
+      var has = this.codec.has_.bind(this.codec);
+      var out = {}, names = this.codec.stateNames(machine), depth = Object.create(null), order = [];
       // Keep only real positions; anything else (written outside the studio) is placed again.
       Object.keys(layout || {}).forEach(function(k) {
         var p = layout[k];
-        if ( p && typeof p.x === 'number' && typeof p.y === 'number' && isFinite(p.x) && isFinite(p.y) ) out[k] = p;
+        if ( has(machine.states, k) && p && typeof p.x === 'number' && typeof p.y === 'number' && isFinite(p.x) && isFinite(p.y) ) out[k] = p;
       });
-      if ( machine.initial && machine.states[machine.initial] ) {
+      if ( machine.initial && has(machine.states, machine.initial) ) {
         depth[machine.initial] = 0;
         order.push(machine.initial);
         for ( var i = 0 ; i < order.length ; i++ ) {
           var s = machine.states[order[i]], on = ( s && s.on ) || {};
           Object.keys(on).forEach(function(e) {
             var t = on[e];
-            if ( machine.states[t] && depth[t] === undefined ) { depth[t] = depth[order[i]] + 1; order.push(t); }
+            if ( has(machine.states, t) && depth[t] === undefined ) { depth[t] = depth[order[i]] + 1; order.push(t); }
           });
         }
       }
@@ -113,7 +118,7 @@ foam.CLASS({
       };
       var rows = {};
       order.forEach(function(n) {
-        if ( out[n] ) return;
+        if ( has(out, n) ) return;
         var col = depth[n], row = rows[col] || 0, p;
         do { p = { x: this.ORIGIN + col * this.COL_GAP, y: this.ORIGIN + row * this.ROW_GAP }; row++; } while ( ! free(p) );
         rows[col] = row;
@@ -130,8 +135,8 @@ foam.CLASS({
       this.svg_.removeAllChildren();
       if ( ! m || ! m.states ) return;
 
-      var names = this.codec.stateNames(m);
-      if ( ! opt_positions && names.some(function(n) { return ! ( self.layout && self.layout[n] ); }) ) {
+      var names = this.codec.stateNames(m), has = this.codec.has_.bind(this.codec);
+      if ( ! opt_positions && names.some(function(n) { return ! has(self.layout, n); }) ) {
         this.layout = this.autoLayout(m, this.layout); // fires onChange, which draws
         return;
       }
@@ -140,25 +145,27 @@ foam.CLASS({
       names.forEach(function(n) { maxX = Math.max(maxX, pos[n].x + W + self.ORIGIN); maxY = Math.max(maxY, pos[n].y + H + self.ORIGIN); });
       this.svg_.attrs({ width: maxX, height: maxY });
 
-      var problemStates = {};
+      var problemStates = Object.create(null);
       ( this.problems || [] ).forEach(function(p) { if ( p.state ) problemStates[p.state] = true; });
       var sel = this.selection || {};
 
       // Arrows first, so state boxes sit on top of their ends.
-      var arrows = this.codec.arrows(m).filter(function(a) { return pos[a.to] && pos[a.from]; });
+      var arrows = this.codec.arrows(m).filter(function(a) { return has(pos, a.to) && has(pos, a.from); });
       var pairs = {};
       arrows.forEach(function(a) { pairs[a.from + '\u0000' + a.to] = ( pairs[a.from + '\u0000' + a.to] || 0 ) + 1; });
-      var seen = {};
+      var seen = {}, labels = [];
       arrows.forEach(function(a) {
         var k = a.from + '\u0000' + a.to, idx = seen[k] = ( seen[k] || 0 ) + 1;
         var reverse = !! pairs[a.to + '\u0000' + a.from] && a.from !== a.to;
         var g = self.svg_.start('g').addClass('arrow')
           .enableClass('selected', sel.kind === 'arrow' && sel.from === a.from && sel.event === a.event)
           .attrs({ 'data-from': a.from, 'data-event': a.event, 'data-to': a.to });
-        var geo = a.from === a.to ? self.loopGeometry_(pos[a.from], idx) : self.arrowGeometry_(pos[a.from], pos[a.to], reverse, idx);
+        var lw  = String(a.event).length * self.LABEL_CHAR_W + 6;
+        var geo = a.from === a.to ? self.loopGeometry_(pos[a.from], idx) : self.arrowGeometry_(pos[a.from], pos[a.to], reverse, idx, lw);
+        var lp  = self.freeLabelSpot_(labels, { x: geo.lx, y: geo.ly, w: lw, h: self.LABEL_H });
         g.start('path').addClass('line').attrs({ d: geo.d }).end();
         g.start('path').addClass('head').attrs({ d: geo.head }).end();
-        g.start('text').addClass('label').attrs({ x: geo.lx, y: geo.ly }).add(a.event).end();
+        g.start('text').addClass('label').attrs({ x: lp.x, y: lp.y }).add(a.event).end();
         g.end();
       });
 
@@ -199,19 +206,33 @@ foam.CLASS({
         ' L' + f(bx - Wd * Math.sin(a)) + ' ' + f(by + Wd * Math.cos(a)) + ' Z';
     },
 
-    function arrowGeometry_(pf, pt, curved, idx) {
-      /** A straight arrow, or a bent one when the reverse arrow exists or several events share the pair. */
+    function freeLabelSpot_(placed, box) {
+      /** Moves a label down a line at a time until it overlaps no label already placed; adds it to placed. */
+      var hits = function(b) { return placed.some(function(q) { return Math.abs(b.x - q.x) * 2 < b.w + q.w && Math.abs(b.y - q.y) * 2 < b.h + q.h; }); };
+      for ( var i = 0 ; i < 8 && hits(box) ; i++ ) box = Object.assign({}, box, { y: box.y + box.h });
+      placed.push(box);
+      return box;
+    },
+
+    function arrowGeometry_(pf, pt, curved, idx, opt_labelW) {
+      /**
+       * A straight arrow, or a bent one when the reverse arrow exists or several events
+       * share the pair. A bent arrow's label sits beside its curve, on the outside, so
+       * the labels of a back-and-forth pair do not meet in the middle.
+       */
       var W = this.BOX_W, H = this.BOX_H;
       var c1 = { x: pf.x + W / 2, y: pf.y + H / 2 }, c2 = { x: pt.x + W / 2, y: pt.y + H / 2 };
       var bend = ( curved ? 28 : 0 ) + ( idx - 1 ) * 22;
       var mx = ( c1.x + c2.x ) / 2, my = ( c1.y + c2.y ) / 2, dx = c2.x - c1.x, dy = c2.y - c1.y, len = Math.sqrt(dx * dx + dy * dy) || 1;
-      var cx = mx - dy / len * bend, cy = my + dx / len * bend;
+      var nx = - dy / len, ny = dx / len, cx = mx + nx * bend, cy = my + ny * bend;
+      // Half the label's extent along the bend direction, plus a small gap.
+      var push = Math.abs(nx) * ( opt_labelW || 0 ) / 2 + Math.abs(ny) * this.LABEL_H / 2 + 2;
       var a = this.edgePoint_(c1, cx, cy), b = this.edgePoint_(c2, cx, cy);
       return {
         d: bend ? 'M' + a.x + ' ' + a.y + ' Q' + cx + ' ' + cy + ' ' + b.x + ' ' + b.y : 'M' + a.x + ' ' + a.y + ' L' + b.x + ' ' + b.y,
         head: this.head_(b, bend ? cx : a.x, bend ? cy : a.y),
-        lx: bend ? ( a.x + 2 * cx + b.x ) / 4 : mx,
-        ly: bend ? ( a.y + 2 * cy + b.y ) / 4 : my
+        lx: bend ? ( a.x + 2 * cx + b.x ) / 4 + nx * push : mx,
+        ly: bend ? ( a.y + 2 * cy + b.y ) / 4 + ny * push : my
       };
     },
 

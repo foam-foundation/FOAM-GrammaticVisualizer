@@ -112,8 +112,28 @@ foam.CLASS({
       await until(function() { return !! q('g.state.problem[data-state="error"]'); });
       x.test(!! q('g.state.problem[data-state="error"]'), 'a state named in a problem is outlined');
 
+      // Arrow labels never overlap, including the two labels of a back-and-forth pair.
+      v.machine = { initial: 'start', states: { start: { on: { SUBMIT: 'loading' } }, loading: { on: { RESOLVE: 'success', REJECT: 'error' } }, error: { on: { SUBMIT: 'loading' } }, success: { type: 'final' } } };
+      v.layout  = { start: { x: 40, y: 40 }, loading: { x: 240, y: 40 }, success: { x: 440, y: 40 }, error: { x: 240, y: 200 } };
+      await until(function() { return !! stateEl('error') && qa('g.arrow').length === 4; });
+      var boxes = qa('g.arrow text').map(function(t) { var b = t.getBBox(); return { name: t.textContent, x: b.x, y: b.y, w: b.width, h: b.height }; });
+      var hits = [];
+      boxes.forEach(function(a, i) { boxes.slice(i + 1).forEach(function(b) {
+        if ( a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h ) hits.push(a.name + '/' + b.name);
+      }); });
+      x.test(boxes.length === 4 && hits.length === 0, 'no two arrow labels overlap (' + hits.join(', ') + ')');
+
+      // A state named like an inherited key (constructor) gets its own place.
+      var ctorPos = v.autoLayout({ initial: 'a', states: { a: { on: { GO: 'constructor' } }, constructor: {} } }, {});
+      var own = Object.prototype.hasOwnProperty.call(ctorPos, 'constructor') && ctorPos.constructor;
+      x.test(own && typeof own.x === 'number' && typeof own.y === 'number' && own.x !== ctorPos.a.x, 'autoLayout places a state named constructor: ' + JSON.stringify(own));
+      v.machine = { initial: 'a', states: { a: { on: { GO: 'constructor' } }, constructor: { type: 'final' } } };
+      v.layout  = {};
+      await until(function() { return !! stateEl('constructor'); });
+      x.test(stateEl('constructor') && ! /NaN|undefined/.test(stateEl('constructor').getAttribute('transform')), 'and draws it: ' + ( stateEl('constructor') && stateEl('constructor').getAttribute('transform') ));
+
       v.machine = { initial: 'a', states: { a: { on: { GO: 'a' } }, b: { type: 'final' } } };
-      await until(function() { return qa('g.state').length === 2; });
+      await until(function() { return !! stateEl('b'); }); // the machine before also has 2 states
       x.test(qa('g.arrow').length === 1 && stateEl('b').classList.contains('final'), 'a new machine redraws; final states are marked; a self-loop draws');
 
       var coloured = qa('*').filter(function(e) { return /#[0-9a-f]{3}|rgb|hsl/i.test(e.getAttribute('style') || ''); });

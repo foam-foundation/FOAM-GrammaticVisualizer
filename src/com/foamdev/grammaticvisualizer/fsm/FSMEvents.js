@@ -51,7 +51,8 @@ foam.CLASS({
       Object.defineProperty(proto, 'send' + Name, {
         value: async function(event, opt_note) {
           var state  = this[name];
-          var target = state.on && state.on[event];
+          // Own keys only: every object inherits names like constructor.
+          var target = state.on && Object.prototype.hasOwnProperty.call(state.on, event) && state.on[event];
           if ( ! target ) {
             throw new Error('Event "' + event + '" is not handled in state ' + state.name);
           }

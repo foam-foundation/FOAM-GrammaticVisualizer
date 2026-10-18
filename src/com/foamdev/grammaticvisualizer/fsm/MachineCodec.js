@@ -27,14 +27,32 @@ foam.CLASS({
       if ( ! isObj(m) || ! isObj(m.states) ) return { machine: null, error: '"states" must be an object' };
       for ( var n of Object.keys(m.states) ) {
         var st = m.states[n];
+        if ( ! n ) return { machine: null, error: 'A state needs a name.' };
+        if ( this.isReservedName(n) ) return { machine: null, error: this.reservedMessage(n) };
         if ( ! isObj(st) ) return { machine: null, error: 'State "' + n + '" must be an object' };
         if ( st.on === undefined ) continue;
         if ( ! isObj(st.on) ) return { machine: null, error: '"on" of state "' + n + '" must be an object' };
         for ( var e of Object.keys(st.on) ) {
+          if ( ! e ) return { machine: null, error: 'State "' + n + '": an event needs a name.' };
+          if ( this.isReservedName(e) ) return { machine: null, error: this.reservedMessage(e) };
           if ( typeof st.on[e] !== 'string' ) return { machine: null, error: n + ' on ' + e + ': the target must be a state name' };
         }
       }
       return { machine: m, error: '' };
+    },
+
+    function isReservedName(name) {
+      /** __proto__ cannot be a key of a plain object: assigning it replaces the prototype. */
+      return name === '__proto__';
+    },
+
+    function reservedMessage(name) {
+      return 'The name "' + name + '" is not allowed.';
+    },
+
+    function has_(o, key) {
+      /** Own keys only: every object inherits names like constructor and toString. */
+      return !! o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, key);
     },
 
     function stringify(machine) {
@@ -48,7 +66,7 @@ foam.CLASS({
     },
 
     function on_(machine, name) {
-      var s = machine.states[name];
+      var s = this.has_(machine.states, name) && machine.states[name];
       return ( s && s.on && typeof s.on === 'object' ) ? s.on : {};
     },
 
@@ -70,7 +88,7 @@ foam.CLASS({
     },
 
     function isFinal(machine, name) {
-      var s = machine.states[name];
+      var s = this.has_(machine.states, name) && machine.states[name];
       return !! s && s.type === 'final';
     },
 
@@ -104,7 +122,7 @@ foam.CLASS({
        * State name -> foam.FSM value name: the UPPER_SNAKE of the name, made unique and
        * kept clear of the enum's own constants (VIEW, NAME, LABEL, ON, VALUES ...).
        */
-      var self = this, reserved = this.reservedValueNames_(), taken = {}, out = {};
+      var self = this, reserved = this.reservedValueNames_(), taken = {}, out = Object.create(null);
       this.stateNames(machine).forEach(function(n, i) {
         var base = self.upperSnake(n), v = base;
         if ( reserved[v] ) v = 'S_' + base;
@@ -156,7 +174,7 @@ foam.CLASS({
       }
 
       if ( hasInitial && names.indexOf(machine.initial) >= 0 ) {
-        var reached = {}, queue = [ machine.initial ];
+        var reached = Object.create(null), queue = [ machine.initial ];
         reached[machine.initial] = true;
         while ( queue.length ) {
           var on = this.on_(machine, queue.shift());
@@ -187,6 +205,21 @@ foam.CLASS({
       return out;
     },
 
+    function checkTarget(machine, c) {
+      /**
+       * What clicking a check selects: the arrow it is about, else the state, else
+       * null (nothing on the canvas to point at, like a missing initial state).
+       */
+      if ( ! c ) return null;
+      var on = this.on_(machine, c.state);
+      if ( c.event !== undefined && c.state !== undefined && this.has_(on, c.event) ) return { kind: 'arrow', from: c.state, event: c.event };
+      if ( c.event !== undefined ) {
+        var a = this.arrows(machine).filter(function(a) { return a.event === c.event; })[0];
+        return a ? { kind: 'arrow', from: a.from, event: a.event } : null;
+      }
+      return c.state !== undefined && this.has_(machine.states, c.state) ? { kind: 'state', state: c.state } : null;
+    },
+
     // ---- foam.FSM ---------------------------------------------------------
 
     function toFoamFSMSpec(machine, pkg, name) {
@@ -203,6 +236,7 @@ foam.CLASS({
         documentation: machine.description || '',
         values: names.map(function(n) {
           var v = { name: vnames[n], label: n }, on = self.on_(machine, n), targets = [], evs = {};
+          if ( machine.states[n].description ) v.documentation = machine.states[n].description;
           if ( machine.initial === n ) v.isInitial = true;
           Object.keys(on).forEach(function(e) {
             var t = vname(on[e]);
@@ -244,11 +278,17 @@ foam.CLASS({
        * State name: the value's label, else its name. A transition with no event
        * in on gets the event TO_<TARGET>. A state with no transitions is final.
        */
-      var values = cls.VALUES, notes = [], byName = {}, states = {}, finals = 0;
-      values.forEach(function(v) { byName[v.name] = v.label || v.name; });
+      var values = cls.VALUES, notes = [], byName = Object.create(null), states = {}, finals = 0, byLabel = {};
+      values.forEach(function(v) { var l = v.label || v.name; ( byLabel[l] = byLabel[l] || [] ).push(v.name); });
+      // A label two values share would merge them into one state: those use their value names.
+      values.forEach(function(v) { var l = v.label || v.name; byName[v.name] = byLabel[l].length > 1 ? v.name : l; });
+      Object.keys(byLabel).forEach(function(l) {
+        if ( byLabel[l].length > 1 ) notes.push(byLabel[l].join(' and ') + ' share the label "' + l + '"; using their names.');
+      });
       var sname = function(t) { return byName[t] || t; };
       values.forEach(function(v) {
         var s = {}, on = {}, covered = [], ev = v.on || {};
+        if ( v.documentation ) s.description = v.documentation;
         Object.keys(ev).forEach(function(e) { on[e] = sname(ev[e]); covered.push(ev[e]); });
         v.transitions.forEach(function(t) { if ( covered.indexOf(t) < 0 ) on['TO_' + t] = sname(t); });
         if ( v.transitions.length === 0 ) { s.type = 'final'; finals++; }
@@ -281,6 +321,10 @@ foam.CLASS({
       this.arrows(machine).forEach(function(a) { lines.push('  ' + id(a.from) + ' --> ' + id(a.to) + ' : ' + a.event); });
       var self = this;
       this.stateNames(machine).forEach(function(n) { if ( self.isFinal(machine, n) ) lines.push('  ' + id(n) + ' --> [*]'); });
+      this.stateNames(machine).forEach(function(n) {
+        var d = machine.states[n].description;
+        if ( d ) lines.push('  note right of ' + id(n) + ' : ' + String(d).replace(/\s*\n\s*/g, ' '));
+      });
       return lines.join('\n') + '\n';
     }
   ]

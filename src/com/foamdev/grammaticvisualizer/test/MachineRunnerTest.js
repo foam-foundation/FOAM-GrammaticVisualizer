@@ -76,6 +76,23 @@ foam.CLASS({
       x.test(r.error === '' && r.current === 'view', 'a machine with field-like names starts: ' + r.error);
       for ( var ev of [ 'EDIT', 'GO', 'GO' ] ) await r.send(ev);
       x.test(r.current === 'ü' && r.history.length === 3, 'and steps view -> name -> é -> ü (got ' + r.current + ', ' + r.error + ')');
+
+      // Typing in the JSON sets a new machine on every key: that must not define a class each time.
+      var C = this.MachineRunner, classes = function() { return C.runCount_ || 0; };
+      var before = classes();
+      for ( var i = 0 ; i < 5 ; i++ ) r.machine = { initial: 'a', states: { a: { on: { GO: 'b' } }, b: { type: 'final', description: 'edit ' + i } } };
+      x.test(classes() === before, 'setting 5 machines without stepping defines no classes (' + ( classes() - before ) + ')');
+      // A machine no earlier step in this test has used, so its class is not cached yet.
+      var pingPong = function() { return { initial: 'ping', states: { ping: { on: { HIT: 'pong' } }, pong: { on: { HIT: 'ping' } } } }; };
+      r.machine = pingPong();
+      await r.send('HIT');
+      x.test(classes() === before + 1 && r.current === 'pong', 'the first step defines one class and steps (' + ( classes() - before ) + ', ' + r.current + ')');
+      r.start();
+      x.test(r.current === 'ping', 'start() goes back to the initial state');
+      await r.send('HIT');
+      r.machine = pingPong();
+      await r.send('HIT');
+      x.test(classes() === before + 1 && r.current === 'pong', 'stepping the same machine again reuses its class (' + ( classes() - before ) + ')');
     }
   ]
 });

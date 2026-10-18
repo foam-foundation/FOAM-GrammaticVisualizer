@@ -163,6 +163,42 @@ foam.CLASS({
       x.test(await until(function() { return qa('g.state').length === 4 && !! root.querySelector('g.state[data-state="loading"]'); }), 'opening the LoginForm example draws its 4 states');
       x.test(v.machineId === 0 && v.machine.initial === 'start', 'an opened class is a new, unsaved machine starting at start');
 
+      // Renaming a state in the JSON keeps its box where it was, and leaves no old key behind.
+      await until(function() { return !! ( v.layout && v.layout.success ); });
+      var successAt = JSON.stringify(v.layout.success);
+      v.definitionText = v.definitionText.replace(/"success"/g, '"done"');
+      x.test(await until(function() { return !! root.querySelector('g.state[data-state="done"]'); }), 'renaming success to done in the JSON redraws it');
+      x.test(JSON.stringify(v.layout.done) === successAt && ! ( 'success' in v.layout ), 'and done keeps the place success had: ' + JSON.stringify(v.layout));
+
+      // The arrow inspector shows the arrow's current target.
+      var inspectorHas = function(s) { return qa('span').some(function(e) { return e.textContent === s; }); };
+      v.selection = { kind: 'arrow', from: 'loading', event: 'REJECT' };
+      x.test(await until(function() { return inspectorHas('→ error'); }), 'selecting loading on REJECT shows its target error');
+      v.definitionText = v.definitionText.replace('"REJECT": "error"', '"REJECT": "start"');
+      x.test(await until(function() { return inspectorHas('→ start'); }), 'retargeting it in the JSON updates the inspector to start');
+
+      // A check about an arrow selects the arrow.
+      v.definitionText = v.definitionText.replace('"REJECT": "start"', '"REJECT": "nowhere"');
+      var checksTab2 = qa('.foam-u2-SegmentedTabs-tabRow > *').filter(function(e) { return /Checks/.test(e.textContent); })[0];
+      checksTab2 && checksTab2.click();
+      var row = null;
+      await until(function() { row = qa('.' + v.myClass('check')).filter(function(e) { return /"nowhere"/.test(e.textContent); })[0]; return !! row; });
+      row && row.click();
+      x.test(v.selection && v.selection.kind === 'arrow' && v.selection.from === 'loading' && v.selection.event === 'REJECT', 'clicking the "goes to nowhere" check selects that arrow: ' + JSON.stringify(v.selection));
+      v.definitionText = v.definitionText.replace('"REJECT": "nowhere"', '"REJECT": "error"');
+
+      // Final asks before it removes arrows.
+      v.selection = { kind: 'state', state: 'loading' };
+      var ask = v.TOGGLE_FINAL.confirmationView(y, v);
+      x.test(ask && ask.body.indexOf('RESOLVE → done') >= 0 && ask.body.indexOf('REJECT → error') >= 0, 'Final on a state with arrows asks first, and names the arrows it removes: ' + JSON.stringify(ask));
+      v.selection = { kind: 'state', state: 'done' };
+      x.test(v.TOGGLE_FINAL.confirmationView(y, v) === null, 'Final on a state with no arrows does not ask');
+
+      // A file that is not a machine is explained on the Import tab, and the JSON is left alone.
+      v.parseError = '';
+      v.openText('{ not json');
+      x.test(v.importNotes.indexOf(v.FILE_NOT_A_MACHINE) === 0 && v.parseError === '', 'a bad file is explained in the Import notes, not as a JSON error: ' + v.importNotes);
+
       // Only foam views for controls.
       var raw = qa('button, input, select, textarea').filter(function(e) {
         if ( e.type === 'file' ) return false; // FileUploadTextField's hidden input

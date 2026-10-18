@@ -148,10 +148,10 @@ foam.CLASS({
       x.test(same(ops.renameLayoutKey(layout, 'clean', 'start'), { start: { x: 1, y: 2 }, dirty: { x: 3, y: 4 } }) && layout.clean, 'renameLayoutKey returns a new map');
       x.test(same(ops.dropLayoutKey(layout, 'clean'), { dirty: { x: 3, y: 4 } }) && layout.clean, 'dropLayoutKey returns a new map');
 
-      this.testFoamFSM(x, codec, save, same);
+      this.testFoamFSM(x, codec, ops, save, same);
     },
 
-    function testFoamFSM(x, codec, save, same) {
+    function testFoamFSM(x, codec, ops, save, same) {
       // Class names are fresh per run so a second run in the same page does not redefine a class.
       var pkg = 'com.foamdev.grammaticvisualizer.test.gen', n = Date.now();
       var withoutId = function(m) { var c = JSON.parse(JSON.stringify(m)); delete c.id; return c; };
@@ -212,6 +212,68 @@ foam.CLASS({
       x.test(same(withoutId(codec.fromFoamFSM(foam.lookup(ex + 'SaveButton')).machine), withoutId(save())), 'the SaveButton example is the Save button machine');
       var login = codec.fromFoamFSM(foam.lookup(ex + 'LoginForm')).machine;
       x.test(login.initial === 'start' && login.states.loading.on.REJECT === 'error' && login.states.success.type === 'final', 'the LoginForm example: start, loading, error, success');
+
+      // ---- Empty names --------------------------------------------------------
+      x.test(codec.parse('{ "initial": "a", "states": { "a": {}, "": {} } }').error === 'A state needs a name.', 'parse refuses an empty state name');
+      x.test(codec.parse('{ "initial": "a", "states": { "a": { "on": { "": "a" } } } }').error === 'State "a": an event needs a name.', 'parse refuses an empty event name');
+
+      // ---- Names every object inherits ----------------------------------------
+      var proto = '{ "initial": "a", "states": { "a": {}, "__proto__": {} } }';
+      x.test(codec.parse(proto).error === 'The name "__proto__" is not allowed.', 'parse refuses a state named __proto__');
+      x.test(codec.parse('{ "initial": "a", "states": { "a": { "on": { "__proto__": "a" } } } }').error === 'The name "__proto__" is not allowed.', 'parse refuses an event named __proto__');
+      x.test(ops.addState(save(), '__proto__').error === 'The name "__proto__" is not allowed.', 'addState refuses __proto__');
+      x.test(ops.renameState(save(), 'error', '__proto__').error === 'The name "__proto__" is not allowed.', 'renameState refuses __proto__');
+      x.test(ops.addArrow(save(), 'error', '__proto__', 'clean').error === 'The name "__proto__" is not allowed.', 'addArrow refuses __proto__');
+      x.test(ops.renameEvent(save(), 'error', 'RETRY', '__proto__').error === 'The name "__proto__" is not allowed.', 'renameEvent refuses __proto__');
+
+      var ctor = { initial: 'a', states: { a: { on: { GO: 'constructor' } }, constructor: { type: 'final' } } };
+      x.test(codec.check(ctor).length === 0, 'a state named constructor is reachable, not a problem: ' + JSON.stringify(codec.check(ctor)));
+      var lostCtor = codec.check({ initial: 'a', states: { a: { type: 'final' }, constructor: { type: 'final' } } });
+      x.test(lostCtor.some(function(c) { return c.kind === 'unreachable' && c.state === 'constructor'; }),'an unreachable state named constructor is reported: ' + JSON.stringify(lostCtor));
+      var toCtor = ops.renameState(save(), 'error', 'constructor');
+      x.test(toCtor.error === '' && toCtor.machine.states.saving.on.FAIL === 'constructor', 'renameState to constructor works: ' + toCtor.error);
+      var ctorArrow = ops.addArrow(save(), 'error', 'constructor', 'clean');
+      x.test(ctorArrow.error === '' && ctorArrow.machine.states.error.on.constructor === 'clean', 'addArrow with the event constructor works: ' + ctorArrow.error);
+      var toStr = ops.renameEvent(save(), 'error', 'RETRY', 'toString');
+      x.test(toStr.error === '' && toStr.machine.states.error.on.toString === 'saving', 'renameEvent to toString works: ' + toStr.error);
+
+      // ---- Layout follows edits made in the JSON ------------------------------
+      var oldM = { initial: 'a', states: { a: { on: { GO: 'b' } }, b: {} } };
+      var renamedM = { initial: 'a', states: { a: { on: { GO: 'c' } }, c: {} } };
+      var lay = { a: { x: 1, y: 2 }, b: { x: 3, y: 4 } };
+      x.test(same(ops.syncLayout(lay, oldM, renamedM), { a: { x: 1, y: 2 }, c: { x: 3, y: 4 } }), 'syncLayout: one state gone and one new is a rename; the box keeps its place');
+      x.test(lay.b && ! lay.c, 'syncLayout does not change its input');
+      x.test(same(ops.syncLayout(lay, oldM, { initial: 'a', states: { a: {} } }), { a: { x: 1, y: 2 } }), 'syncLayout drops the position of a removed state');
+      x.test(same(ops.syncLayout(lay, oldM, { initial: 'a', states: { a: {}, c: {}, d: {} } }), { a: { x: 1, y: 2 } }), 'syncLayout: two new names for one gone is not a rename');
+      x.test(same(ops.syncLayout({ a: { x: 1, y: 2 }, junk: { x: 9, y: 9 } }, oldM, oldM), { a: { x: 1, y: 2 } }), 'syncLayout drops keys for states that do not exist');
+
+      // ---- Per-state description ---------------------------------------------
+      var described = { initial: 'a', states: { a: { description: 'Waiting for input', on: { GO: 'b' } }, b: { type: 'final' } } };
+      var dspec = codec.toFoamFSMSpec(described, pkg, 'Described' + n);
+      x.test(dspec.values[0].documentation === 'Waiting for input' && dspec.values[1].documentation === undefined, 'toFoamFSMSpec: a state description becomes the value documentation');
+      foam.FSM(dspec);
+      var dback = codec.fromFoamFSM(foam.lookup(pkg + '.Described' + n)).machine;
+      x.test(dback.states.a.description === 'Waiting for input' && dback.states.b.description === undefined, 'fromFoamFSM: value documentation comes back as the state description');
+      x.test(codec.toMermaid(described).indexOf('  note right of a : Waiting for input\n') >= 0, 'toMermaid: a state description is a note: ' + codec.toMermaid(described));
+
+      // ---- Import: two values with one label ----------------------------------
+      foam.FSM({ package: pkg, name: 'SameLabel' + n, values: [
+        { name: 'OPEN', label: 'Open', isInitial: true, transitions: [ 'DONE_OK', 'DONE_FAIL' ], on: { OK: 'DONE_OK', FAIL: 'DONE_FAIL' } },
+        { name: 'DONE_OK',   label: 'Done', transitions: [] },
+        { name: 'DONE_FAIL', label: 'Done', transitions: [] }
+      ] });
+      var sl = codec.fromFoamFSM(foam.lookup(pkg + '.SameLabel' + n));
+      x.test(codec.stateNames(sl.machine).length === 3, 'fromFoamFSM: two values with one label stay two states: ' + JSON.stringify(sl.machine.states));
+      x.test(sl.machine.states.Open.on.OK === 'DONE_OK' && sl.machine.states.Open.on.FAIL === 'DONE_FAIL', 'they are named by their value names, and the arrows follow');
+      x.test(sl.notes.indexOf('DONE_OK and DONE_FAIL share the label "Done"; using their names.') >= 0, 'and a note says so: ' + sl.notes.join(' | '));
+
+      // ---- What a check row selects ------------------------------------------
+      var bad = { initial: 'a', states: { a: { on: { GO: 'nowhere', go: 'b' } }, b: { on: { GO: 'a' } }, lost: { type: 'final' } } };
+      var target = function(kind) { return codec.checkTarget(bad, codec.check(bad).filter(function(c) { return c.kind === kind; })[0]); };
+      x.test(same(target('unknown-target'), { kind: 'arrow', from: 'a', event: 'GO' }), 'checkTarget: an arrow to a missing state selects that arrow: ' + JSON.stringify(target('unknown-target')));
+      x.test(same(target('event-case-clash'), { kind: 'arrow', from: 'a', event: 'go' }), 'checkTarget: an event case clash selects the first arrow with that event: ' + JSON.stringify(target('event-case-clash')));
+      x.test(same(target('unreachable'), { kind: 'state', state: 'lost' }), 'checkTarget: an unreachable state selects the state');
+      x.test(codec.checkTarget({ initial: 'zz', states: { a: {} } }, codec.check({ initial: 'zz', states: { a: {} } })[0]) === null, 'checkTarget: a missing initial state selects nothing');
     }
   ]
 });

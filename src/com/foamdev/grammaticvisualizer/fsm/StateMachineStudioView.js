@@ -65,7 +65,10 @@ foam.CLASS({
     { name: 'EVENT_LABEL',       message: 'Event' },
     { name: 'NEW_MACHINE_NAME',  message: 'New machine' },
     { name: 'NOT_DRAWN',         message: 'Kept in the JSON but not drawn:' },
-    { name: 'UNSAVED_BLOCK',     message: 'You have unsaved changes. Save them, or press Discard changes, first.' }
+    { name: 'UNSAVED_BLOCK',     message: 'You have unsaved changes. Save them, or press Discard changes, first.' },
+    { name: 'FILE_NOT_A_MACHINE', message: 'This file is not a machine:' },
+    { name: 'FINAL_TITLE',       message: 'Make this state final?' },
+    { name: 'FINAL_BODY',        message: 'A final state has no way out, so these arrows will be removed:' }
   ],
 
   css: `
@@ -286,7 +289,7 @@ foam.CLASS({
                     checks.forEach(function(c) {
                       this.start().addClass(self.myClass('check')).enableClass('blocking', c.blocking)
                         .add(c.message)
-                        .on('click', function() { if ( c.state && self.machine.states[c.state] ) self.selection = { kind: 'state', state: c.state }; })
+                        .on('click', function() { var t = self.codec.checkTarget(self.machine, c); if ( t ) self.selection = t; })
                       .end();
                     }, this);
                   }))
@@ -336,6 +339,7 @@ foam.CLASS({
     },
 
     function inspector_(e, sel) {
+      var self = this;
       if ( sel && sel.kind === 'state' ) {
         e.start('span').addClass('p-label').add(this.STATE_LABEL).end()
           .add(this.STATE_NAME, this.MAKE_INITIAL, this.TOGGLE_FINAL, this.ADD_ARROW, this.DELETE_STATE);
@@ -344,7 +348,11 @@ foam.CLASS({
         e.start('span').addClass('p-label').add(this.EVENT_LABEL).end()
           .start('span').add(sel.from + ' →').end()
           .add(this.EVENT_NAME)
-          .start('span').add('→ ' + ( this.machine && this.machine.states[sel.from] && this.machine.states[sel.from].on ? this.machine.states[sel.from].on[sel.event] : '' )).end()
+          // Live: the target can change in the JSON while the arrow stays selected.
+          .start('span').add(this.machine$.map(function(m) {
+            var on = m ? self.codec.on_(m, sel.from) : {};
+            return '→ ' + ( self.codec.has_(on, sel.event) ? on[sel.event] : '' );
+          })).end()
           .add(this.DELETE_ARROW);
       } else {
         e.start('span').addClass(this.myClass('hint')).add(this.SELECT_HINT).end();
@@ -361,7 +369,12 @@ foam.CLASS({
     function onText(text) {
       var p = this.codec.parse(text);
       this.parseError = p.error;
-      if ( p.machine ) { this.machine = p.machine; this.dropMissingSelection_(); }
+      if ( ! p.machine ) return;
+      // A rename typed in the JSON keeps its box in place; positions of removed states go.
+      var layout = this.ops.syncLayout(this.layout, this.machine, p.machine);
+      this.machine = p.machine;
+      this.layout  = layout;
+      this.dropMissingSelection_();
     },
 
     function applyOp(r) {
@@ -378,8 +391,8 @@ foam.CLASS({
     function dropMissingSelection_() {
       var s = this.selection, m = this.machine;
       if ( ! s || ! m ) return;
-      if ( s.kind === 'state' && ! m.states[s.state] ) this.selection = null;
-      if ( s.kind === 'arrow' && ! ( m.states[s.from] && m.states[s.from].on && m.states[s.from].on[s.event] !== undefined ) ) this.selection = null;
+      if ( s.kind === 'state' && ! this.codec.has_(m.states, s.state) ) this.selection = null;
+      if ( s.kind === 'arrow' && ! this.codec.has_(this.codec.on_(m, s.from), s.event) ) this.selection = null;
     },
 
     function markSaved_() {
@@ -389,7 +402,9 @@ foam.CLASS({
     function openText(text) {
       /** Opens JSON text (from a file) as a new, unsaved machine. */
       var p = this.codec.parse(text);
-      if ( p.error ) { this.parseError = p.error; return; }
+      // Shown where the file was picked; the JSON on screen is not the file, so parseError stays.
+      if ( p.error ) { this.importNotes = this.FILE_NOT_A_MACHINE + ' ' + p.error; return; }
+      this.importNotes = '';
       this.quiet_(function() { this.machineId = 0; });
       this.name = p.machine.id || this.NEW_MACHINE_NAME;
       this.description = p.machine.description || '';
@@ -436,6 +451,18 @@ foam.CLASS({
       } else {
         this.quiet_(function() { this.eventName = sel.event; });
       }
+    },
+
+    function finalConfirmation_() {
+      /** For Final: the dialog to show when making the selected state final removes arrows, else null. */
+      var s = this.selection, m = this.machine;
+      if ( ! s || s.kind !== 'state' || ! m || this.codec.isFinal(m, s.state) ) return null;
+      var on = this.codec.on_(m, s.state), events = Object.keys(on);
+      if ( ! events.length ) return null;
+      return {
+        title: this.FINAL_TITLE,
+        body:  this.FINAL_BODY + ' ' + events.map(function(e) { return e + ' → ' + on[e]; }).join(', ')
+      };
     },
 
     function connect(from, to) {
@@ -530,6 +557,8 @@ foam.CLASS({
       label: 'Final',
       buttonStyle: 'SECONDARY',
       isEnabled: function(selection) { return !! selection && selection.kind === 'state'; },
+      // A final state has no way out: say which arrows go before removing them.
+      confirmationView: function(X, data) { return data.finalConfirmation_(); },
       code: function() {
         var n = this.selection.state;
         this.applyOp(this.ops.setFinal(this.machine, n, ! this.codec.isFinal(this.machine, n)));
