@@ -13,7 +13,7 @@ foam.CLASS({
     Draws a machine (see MachineCodec) as SVG: a box per state, an arrow per
     event. Click selects a state or an arrow label, drag moves a state, and
     with connectFrom set the next state clicked publishes
-    'connect'(from, to). Positions live in layout, never in the machine.
+    'connect'(from, to). A finished drag publishes 'moved'(state). Positions live in layout, never in the machine.
     Colours come from tokens in css; state shows by stroke weight and fill too.
   `,
 
@@ -282,7 +282,7 @@ foam.CLASS({
       var d = this.drag_;
       this.drag_ = null;
       if ( ! d ) return;
-      if ( d.moved && d.live ) { this.layout = d.live; return; }
+      if ( d.moved && d.live ) { this.layout = d.live; this.pub('moved', d.state); return; }
       if ( d.state && this.connectFrom ) {
         var from = this.connectFrom;
         this.connectFrom = '';

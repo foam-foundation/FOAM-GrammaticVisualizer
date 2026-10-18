@@ -134,10 +134,16 @@ foam.CLASS({
     },
     {
       class: 'Boolean',
+      name: 'moved_',
+      hidden: true,
+      documentation: 'A box was dragged since the last load or save. Positions the canvas places by itself do not count.'
+    },
+    {
+      class: 'Boolean',
       name: 'dirty',
-      expression: function(name, description, definitionText, savedSnapshot_) {
+      expression: function(name, description, definitionText, savedSnapshot_, moved_) {
         // Nothing loaded yet: nothing to lose.
-        return !! savedSnapshot_ && JSON.stringify([ name, description, definitionText ]) !== savedSnapshot_;
+        return !! savedSnapshot_ && ( moved_ || JSON.stringify([ name, description, definitionText ]) !== savedSnapshot_ );
       }
     },
     {
@@ -253,6 +259,7 @@ foam.CLASS({
       this.canvas.current$.follow(this.runner.current$);
       this.canvas.problems$.follow(this.checks$);
       this.onDetach(this.canvas.sub('connect', function(_, __, from, to) { self.connect(from, to); }));
+      this.onDetach(this.canvas.sub('moved', function() { self.moved_ = true; }));
 
       this.addClass()
         .startContext({ data: this })
@@ -397,6 +404,7 @@ foam.CLASS({
 
     function markSaved_() {
       this.savedSnapshot_ = JSON.stringify([ this.name, this.description, this.definitionText ]);
+      this.moved_ = false;
     },
 
     function openText(text) {

@@ -61,6 +61,23 @@ foam.CLASS({
       x.test(v.foamSource.indexOf("on: { EDIT: 'DIRTY' }") >= 0, 'the foam.FSM code shows the on map');
       x.test(v.mermaid.indexOf('stateDiagram-v2') === 0, 'the Mermaid code is a state diagram');
 
+      // Moving a box is an unsaved change; positions placed by the canvas itself are not.
+      await wait(200);
+      x.test(v.dirty === false, 'a freshly loaded machine is not dirty, though the canvas placed its boxes');
+      var drag = function(name, dx, dy) {
+        var el = root.querySelector('g.state[data-state="' + name + '"]'), svg = el.ownerSVGElement, r = el.getBoundingClientRect();
+        var fire = function(t, type, cx, cy) { t.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: cx, clientY: cy, pointerId: 1, button: 0, isPrimary: true })); };
+        fire(el, 'pointerdown', r.left + 5, r.top + 5);
+        fire(svg, 'pointermove', r.left + 5 + dx / 2, r.top + 5 + dy / 2);
+        fire(svg, 'pointermove', r.left + 5 + dx, r.top + 5 + dy);
+        fire(svg, 'pointerup', r.left + 5 + dx, r.top + 5 + dy);
+      };
+      var placedAt = JSON.stringify(v.layout.clean);
+      drag('clean', 60, 40);
+      x.test(v.dirty === true && JSON.stringify(v.layout.clean) !== placedAt, 'dragging a box makes the screen dirty');
+      v.discardChanges();
+      x.test(await until(function() { return v.dirty === false && JSON.stringify(v.layout.clean) === placedAt; }), 'Discard changes puts the box back: ' + JSON.stringify(v.layout.clean));
+
       // JSON -> canvas
       var m = JSON.parse(saveJSON);
       m.states.extra = { type: 'final' };

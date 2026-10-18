@@ -94,12 +94,18 @@ foam.CLASS({
       fire(svg, 'pointerdown', r0.right - 2, r0.bottom - 2); fire(svg, 'pointerup', r0.right - 2, r0.bottom - 2);
       x.test(v.selection === null, 'clicking empty space clears the selection');
 
+      var moved = null;
+      v.sub('moved', function(_, __, name) { moved = name; });
       var before = Object.assign({}, v.layout.clean), el = stateEl('clean'), r = el.getBoundingClientRect();
       fire(el, 'pointerdown', r.left + 5, r.top + 5);
       fire(svg, 'pointermove', r.left + 30, r.top + 20);
       fire(svg, 'pointermove', r.left + 55, r.top + 35);
       fire(svg, 'pointerup', r.left + 55, r.top + 35);
       x.test(v.layout.clean.x === before.x + 50 && v.layout.clean.y === before.y + 30, 'dragging a state moves it by the pointer delta (' + JSON.stringify(before) + ' -> ' + JSON.stringify(v.layout.clean) + ')');
+      x.test(moved === 'clean', 'a finished drag publishes moved(state): ' + moved);
+      moved = null;
+      click(stateEl('dirty'));
+      x.test(moved === null, 'a click without a drag publishes no moved');
 
       var got = null;
       v.sub('connect', function(_, __, from, to) { got = [ from, to ]; });
