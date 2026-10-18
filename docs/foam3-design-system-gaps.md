@@ -39,6 +39,12 @@ design system · 🟡 paper cut — cost time, not design.
 | 26 | A table cell can't have an edit view: every cell is forced to VIEW | 🟠 | A per-column `tableCellView` / mode-aware cell, plus an inline-edit table mode |
 | 27 | A detail view can't join the record's Save | 🟠 | A `save` / `cancel` topic on the update view, or a `saveHooks` export |
 | 28 | No "unsaved changes" guard when leaving a screen | 🟠 | A stack-level `canLeave` check plus one standard Discard / Keep dialog |
+| 29 | `foam.FSM` has no named events | 🟠 | An `on` map per state and `send<Name>(event)`, JS and Java |
+| 30 | No way to edit or share a `foam.FSM`; `FSMDiagramView` is read-only | 🟠 | An editable diagram and an XState-JSON import / export |
+| 31 | `SUPER` in a refinement reaches the parent class, not the refined method | 🟡 | Chain refinements, or document how to wrap |
+| 32 | Buttons for data items need hand-made `foam.lang.Action` objects | 🟡 | An action-list view over data, or docs for the pattern |
+| 33 | `SegmentedTabs` gives each tab at least 100px and never wraps | 🟡 | `minmax(0, 1fr)` columns, or a `fit` that shrinks |
+| 34 | `FileUploadTextField` reads files as a binary string | 🟡 | `readAsText` for text files |
 
 ---
 
@@ -238,3 +244,46 @@ design system · 🟡 paper cut — cost time, not design.
 **Also searched** · every branch and the full git history: no `canLeave` / `canDeactivate` / `beforeLeave` / `isDirty`-style guard was ever committed. Commit `4f894f0413` (FOAM-5431) left a note in comics v3 `CreateView.cancel`: *"ideally, if the user has made any changes, Cancel would prompt a 'changes will be lost — confirm?' dialog … best tackled as a separate issue"*; `ebc350c152` removed the note without building it. Closest per-view versions: the wizard's exit prompt (`IncrementalStepWizardView.js:283-305`, always asks, X button only) and the old u2 `DAOUpdateController` `dirty_` flag (`browser.js:488`, hides Back while dirty, no dialog). Choke points for a real guard: `Stack.jump` (pop goes through it; push does not), `ApplicationController.pushMenu`, and `Memento.onHashChange` (runs after the URL changed, so it would have to restore it).
 **Did** · nothing yet; the Theme screen shows staged rows instead (status line planned).
 **Fix** · a `canLeave()` (or `dirty` slot) that `Stack` asks the top view before `back` / `push` / `jump`, a `beforeunload` hook for tab close, and one standard Discard / Keep editing dialog built on `ConfirmationModal`. Document it next to `confirmationRequired`.
+
+## 29. `foam.FSM` has no named events 🟠
+
+**Needed** · a state machine for UI behaviour, written the way XState and every statechart text writes it: "in `dirty`, on `SAVE`, go to `saving`". A button sends `SAVE`; it should not need to know the target.
+**foam3** · a state lists only the states it may go to (`transitions: ['SAVING']`, `StateMachineEnum.js:15`), and a record moves by naming the target: `transitionStatusTo('SAVING')` (`FSM.js:166`). An arrow has no name, so two events to the same target (`SAVE`, `AUTOSAVE`) are one arrow. The Java side (`StateMachineEnum.java`, `FSMDAO.java`) is the same.
+**Did** · `src/com/foamdev/grammaticvisualizer/fsm/FSMEvents.js`, app-side refinements: an `on` map per state (event → target) and `send<Name>(event, opt_note)` on the record. `send` looks the event up and calls foam3's own `transition<Name>To`, so guards, permissions and history still apply; the history note is the event name. Browser only: `on` is `generateJava: false`.
+**Fix** · move `on` and `send<Name>` into `StateMachineEnum` and the `StateMachine` property, with the Java counterparts (`getOn()`, a `send` in `FSMDAO`), and have `validateMachine` check that every `on` target is in `transitions`.
+
+## 30. No way to edit or share a `foam.FSM`; `FSMDiagramView` is read-only 🟠
+
+**Needed** · draw a machine on a canvas, step through it, and hand it to someone who does not use FOAM.
+**foam3** · `FSMDiagramView` draws an existing class: fixed 400×100 nodes, a simulated-annealing layout, a highlighted current state (`FSMDiagramView.js`). It has no editing, no stored positions, and nothing reads or writes a machine as data; a machine exists only as `foam.FSM({...})` source.
+**Did** · the State Machines screen (`fsm/StateMachineStudioView.js`): a machine is XState-shaped JSON stored in `machineDAO`, drawn and edited on an SVG canvas (`MachineCanvas`), stepped on a `foam.FSM` class defined at runtime from it (`MachineRunner`), and exported as JSON, Mermaid or `foam.FSM` code (`MachineCodec`). Defining a class per edit works; class ids are never reused because the registry keeps every class.
+**Fix** · an import / export between `foam.FSM` and XState JSON in foam3, and an editable mode for `FSMDiagramView` (or a canvas like this one) that writes the values back.
+
+## 31. `SUPER` in a refinement reaches the parent class, not the refined method 🟡
+
+**Needed** · extend `foam.lang.StateMachine.installInProto` (to add `send<Name>`) while keeping what it already does.
+**foam3** · in a `refines:` class, `this.SUPER(proto)` inside `installInProto` called the parent's method (`Enum`'s), not the `StateMachine` method being refined, so `transition<Name>To` was never installed. Nothing warned.
+**Did** · keep a reference to the original before refining and call it by hand (`FSMEvents.js`).
+**Fix** · make `SUPER` in a refinement call the refined method, or document the wrap pattern next to `refines:`.
+
+## 32. Buttons for data items need hand-made `foam.lang.Action` objects 🟡
+
+**Needed** · the Step row: one button per event of the current machine, enabled only when the current state handles it.
+**foam3** · `actions:` are fixed per class; there is no view that turns a list of data items into action buttons with their own enabled state.
+**Did** · `MachineStepRow` builds a `foam.lang.Action` per event inside `dynamic()` and renders each with `ActionView`, so the buttons look and behave like foam's own. The row rebuilds on every step.
+**Fix** · an action-list view over data (`items`, `labelFn`, `isEnabledFn`, `code`), or a documented pattern.
+
+## 33. `SegmentedTabs` gives each tab at least 100px and never wraps 🟡
+
+**Needed** · five tabs (JSON, Code, Checks, Steps, Import) in a 46rem side panel.
+**foam3** · the tab row is a grid with `grid-auto-columns: minmax(100px, 1fr)` and `overflow: auto`; the last tabs scroll out of sight with no hint. The `fit` variant sizes to content but does not shrink either.
+**Did** · `grid-auto-columns: minmax(0, 1fr)` on the tab row inside the studio.
+**Fix** · `minmax(min-content, 1fr)` with wrapping, or a scroll hint.
+
+## 34. `FileUploadTextField` reads files as a binary string 🟡
+
+**Needed** · open a machine from a `.json` file.
+**foam3** · `onFileUpload` uses `FileReader.readAsBinaryString` (`FileUploadTextField.js`), so UTF-8 text with non-ASCII characters (an accented state name) arrives garbled.
+**Did** · used it as is; ASCII JSON works.
+**Fix** · `readAsText` (with an encoding option) for text files.
+

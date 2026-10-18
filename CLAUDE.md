@@ -55,6 +55,7 @@ Two things that cost time if you don't know them:
 | `src/foam/parse/rail/` | The viewer library, package `foam.parse.rail` (kept in FOAM's namespace; came from foam3 PR 5607) |
 | `src/foam/parse/rail/test/` | Its tests + `tests.jrl`; add a class to `pom.js`, `tests.jrl` and the README list |
 | `src/com/foamdev/grammaticvisualizer/` | The app: `Sentence` model (placeholder), `GrammarVisualizerView` (the menu screen) |
+| `src/com/foamdev/grammaticvisualizer/fsm/` | State Machines screen (`#grammaticVisualizer.stateMachines`): a machine is XState JSON in `machineDAO`; `MachineCodec` (formats, checks), `MachineOps` (edits), `MachineRunner` (steps a runtime `foam.FSM`), `MachineCanvas` (SVG), `StateMachineStudioView`. `FSMEvents.js` refines `foam.FSM` with an `on` map and `send<Name>(event)` (gap 29) |
 | `journals/*.jrl` | App config as data: `services.jrl` (DAOs), `menus.jrl` (one entry per line — the reader cuts two-line entries), `groups.jrl` + `groupPermissionJunctions.jrl` (what `demo` may see), `users.jrl`, `themes.jrl`, `sentences.jrl` (seed rows), `flows.jrl` + `cmds.jrl` (Reflow) |
 | `journals/*.md` | A markdown file with a `<flow name="…"/>` tag becomes a Reflow flow at build time (`foam3/tools/JournalMaker.js`); `examples-parsers.md` is the parser tutorial with a `<grammar>` block per parser |
 | `deployment/demo/` | `-Jdemo` overlay: the `demo` user |

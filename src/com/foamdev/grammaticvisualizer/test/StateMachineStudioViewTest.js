@@ -121,6 +121,15 @@ foam.CLASS({
       x.test(stored && stored.name === 'Save button 2' && stored.definition === v.definitionText, 'saveMachine stores the name and JSON');
       x.test(stored && JSON.parse(stored.layout || '{}').dirty, 'saveMachine stores the canvas positions');
 
+      // Open a foam.FSM class from the Import tab.
+      v.foamClassId = 'no.such.Machine';
+      v.openFoamFSM();
+      x.test(v.importNotes === v.NOT_A_FSM, 'opening an unknown class id says so: ' + v.importNotes);
+      v.foamClassId = 'com.foamdev.grammaticvisualizer.fsm.examples.LoginForm';
+      v.openFoamFSM();
+      x.test(await until(function() { return qa('g.state').length === 4 && !! root.querySelector('g.state[data-state="loading"]'); }), 'opening the LoginForm example draws its 4 states');
+      x.test(v.machineId === 0 && v.machine.initial === 'start', 'an opened class is a new, unsaved machine starting at start');
+
       // Only foam views for controls.
       var raw = qa('button, input, select, textarea').filter(function(e) {
         if ( e.type === 'file' ) return false; // FileUploadTextField's hidden input

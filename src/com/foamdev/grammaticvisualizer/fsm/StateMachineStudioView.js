@@ -529,7 +529,7 @@ foam.CLASS({
       label: 'Open',
       buttonStyle: 'SECONDARY',
       code: function() {
-        var cls = foam.lookup(this.foamClassId, true);
+        var cls = foam.maybeLookup(this.foamClassId);
         if ( ! cls || ! foam.lang.StateMachineEnum.isSubClass(cls) ) { this.importNotes = this.NOT_A_FSM; return; }
         var r = this.codec.fromFoamFSM(cls);
         this.quiet_(function() { this.machineId = 0; });
