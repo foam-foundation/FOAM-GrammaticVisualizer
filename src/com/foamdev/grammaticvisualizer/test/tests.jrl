@@ -1,2 +1,3 @@
 p({"class":"com.foamdev.grammaticvisualizer.test.SentenceTest","id":"SentenceTest","description":"Sentence Id tests"})
 p({"class":"com.foamdev.grammaticvisualizer.test.ThemeDetailViewTest","id":"ThemeDetailViewTest","description":"Theme detail view: swatches, token overrides, bounded images, input sample"})
+p({"class":"com.foamdev.grammaticvisualizer.test.FSMEventsTest","id":"FSMEventsTest","description":"foam.FSM events refinement: on map per state and send<Name>(event)"})
