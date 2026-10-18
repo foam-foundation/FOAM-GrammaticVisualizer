@@ -25,7 +25,7 @@ foam.CLASS({
     one loads on open).
   `,
 
-  requires: [ 'foam.parse.rail.RailDiagramView' ],
+  requires: [ 'foam.core.controller.Fonts', 'foam.parse.rail.RailDiagramView' ],
 
   methods: [
     function render() {
@@ -43,13 +43,14 @@ foam.CLASS({
         var D = self.RailDiagramView.DEFAULT_PRESETS;
         var presets = Object.assign({}, D, json ? JSON.parse(json) : {}, D);   // built-ins keep their text: the toy one runs on open
         var view = self.RailDiagramView.create({ allowTypedGrammar: true, debugHook: true, presets: presets });
+        self.tag(self.Fonts);   // the app's root font size and typography classes; the page has no ApplicationController to mount them
         self.add(view);
         if ( ! g && ! i ) { view.usePreset('comma list (toy)'); if ( q.has('doc') ) view.documentShown = true; return; }
         return Promise.all([ get(g), get(i) ]).then(function(a) {
           if ( a[1] !== null ) view.setInput(a[1]);
           if ( a[0] !== null ) {
             // Shown, not run: Load is the user's decision to execute it.
-            view.grammarText = a[0]; view.syncGrammarEl(); view.grammarShown = true;
+            view.grammarText = a[0]; view.grammarShown = true;
             view.status = 'grammar from ?grammar= is in the editor; read it, then press Load to run it';
           }
           if ( q.has('doc') ) view.documentShown = true;

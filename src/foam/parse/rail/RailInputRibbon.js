@@ -43,7 +43,7 @@ foam.CLASS({
       var font = T.font('ribbon'), cw = this.measure('M', font), x0 = this.X0, top = this.TOP, h = this.ROW_H;
       var amber = T.outcomeColor(foam.parse.rail.Outcome.TRYING);
 
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, this.width, this.height);
+      ctx.fillStyle = T.resolve('ribbonBg'); ctx.fillRect(0, 0, this.width, this.height);
       ctx.font = font;
       for ( var i = 0 ; i < text.length ; i++ ) {
         var x = x0 + i * cw, bg = null;
